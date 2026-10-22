@@ -41,6 +41,19 @@ def fit_paper_nn(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, 
     return (lambda X: predict_proba(model, X)), {}
 
 
+class _BestKeeper:
+    """Keeps only the best model seen so far (strictly better wins, so the first of tied trials
+    is kept, matching Optuna's best_trial). Avoids holding every trial's model in memory."""
+
+    def __init__(self):
+        self.score, self.model = float("-inf"), None
+
+    def __call__(self, model, score: float) -> float:
+        if score > self.score:
+            self.score, self.model = score, model
+        return score
+
+
 def _search(objective, budget: int, seed: int) -> optuna.Study:
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed))
     study.optimize(objective, n_trials=budget, show_progress_bar=False)
@@ -48,7 +61,7 @@ def _search(objective, budget: int, seed: int) -> optuna.Study:
 
 
 def fit_tuned_mlp(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict]:
-    models = {}
+    keep = _BestKeeper()
 
     def obj(trial):
         set_seed(seed)
@@ -59,17 +72,16 @@ def fit_tuned_mlp(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor,
                     batch_size=trial.suggest_categorical("batch", [64, 256, 1024]),
                     weight_decay=trial.suggest_float("wd", 1e-5, 1e-1, log=True), seed=seed,
                     X_val=Xva, y_val=yva, patience=15)
-        models[trial.number] = m
-        return roc_auc_score(yva, predict_proba(m, Xva))
+        return keep(m, roc_auc_score(yva, predict_proba(m, Xva)))
 
     st = _search(obj, budget, seed)
-    best = models[st.best_trial.number]
+    best = keep.model
     return (lambda X: predict_proba(best, X)), st.best_params
 
 
 def fit_xgb(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict]:
     from xgboost import XGBClassifier
-    models = {}
+    keep = _BestKeeper()
 
     def obj(trial):
         m = XGBClassifier(
@@ -82,17 +94,16 @@ def fit_xgb(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict]
             min_child_weight=trial.suggest_float("min_child_weight", 1, 20, log=True),
             reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10, log=True),
         ).fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
-        models[trial.number] = m
-        return roc_auc_score(yva, m.predict_proba(Xva)[:, 1])
+        return keep(m, roc_auc_score(yva, m.predict_proba(Xva)[:, 1]))
 
     st = _search(obj, budget, seed)
-    best = models[st.best_trial.number]
+    best = keep.model
     return (lambda X: best.predict_proba(X)[:, 1]), st.best_params
 
 
 def fit_lgbm(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict]:
     import lightgbm as lgb
-    models = {}
+    keep = _BestKeeper()
 
     def obj(trial):
         m = lgb.LGBMClassifier(
@@ -104,29 +115,27 @@ def fit_lgbm(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict
             min_child_samples=trial.suggest_int("min_child_samples", 5, 100, log=True),
             reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10, log=True),
         ).fit(Xtr, ytr, eval_X=Xva, eval_y=yva, callbacks=[lgb.early_stopping(50, verbose=False)])
-        models[trial.number] = m
-        return roc_auc_score(yva, m.predict_proba(Xva)[:, 1])
+        return keep(m, roc_auc_score(yva, m.predict_proba(Xva)[:, 1]))
 
     st = _search(obj, budget, seed)
-    best = models[st.best_trial.number]
+    best = keep.model
     return (lambda X: best.predict_proba(X)[:, 1]), st.best_params
 
 
 def fit_rf(Xtr, ytr, Xva, yva, seed, budget, dataset) -> tuple[Predictor, dict]:
-    models = {}
+    keep = _BestKeeper()
 
     def obj(trial):
         m = RandomForestClassifier(
-            n_estimators=300, n_jobs=1, random_state=seed,
+            n_estimators=200, n_jobs=1, random_state=seed,
             max_depth=trial.suggest_categorical("max_depth", [None, 4, 8, 12, 20]),
             min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 50, log=True),
             max_features=trial.suggest_categorical("max_features", ["sqrt", 0.5, 1.0]),
         ).fit(Xtr, ytr)
-        models[trial.number] = m
-        return roc_auc_score(yva, m.predict_proba(Xva)[:, 1])
+        return keep(m, roc_auc_score(yva, m.predict_proba(Xva)[:, 1]))
 
     st = _search(obj, budget, seed)
-    best = models[st.best_trial.number]
+    best = keep.model
     return (lambda X: best.predict_proba(X)[:, 1]), st.best_params
 
 

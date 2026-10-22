@@ -20,9 +20,12 @@ test:
 lint:
 	$(PY) -m ruff check fl_engine experiments tests
 
-# filled in Phase 1/2
+# Phase 1: centralised baselines (~45 min on 16 cores). Phase 2 targets are appended later.
 reproduce: data
-	@echo "experiment pipeline added in Phase 1"
+	$(PY) -m experiments.run_centralized --dataset uci --repeats 5 --folds 5 --budget 20
+	$(PY) -m experiments.run_centralized --dataset cardio --repeats 2 --folds 5 --budget 20
+	$(PY) -m experiments.run_centralized --dataset cardio_lowprev --repeats 2 --folds 5 --budget 20
+	$(PY) -m experiments.make_tables
 
 figures:
 	@echo "figure pipeline added in Phase 2"

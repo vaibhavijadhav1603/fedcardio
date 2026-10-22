@@ -1,0 +1,529 @@
+[
+  {
+    "time_utc": "2026-10-22T13:18:35+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_attacks.py",
+    "commit": "d60a9fa0c74d278c6bd79bb3af1b8710e37c057d",
+    "dirty": true,
+    "params": {
+      "script": "run_attacks"
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_attacks.csv": "656bc2fb3c63dd3057c0af1df8103d434307303763bc592204a52bd59454c820"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:20:31+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_explain.py --method FedAvg-LR (paper)",
+    "commit": "d60a9fa0c74d278c6bd79bb3af1b8710e37c057d",
+    "dirty": true,
+    "params": {
+      "script": "run_explain",
+      "method": "FedAvg-LR (paper)",
+      "version": "1.0.0",
+      "model_id": "uci-logistic_regression-1.0.0",
+      "model_sha256": "bf9e936eb7f78b18bf8c40aa71c8bcd154c0d21f53d693d841964b0044950c55"
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_fairness.csv": "2bcdd5f7f97c7f09e353be7da53e7b76b186a77f4c344ef80d3f8e682a4ba6c3",
+      "results/p2_shap_sites.csv": "29aa2ccc7f40c6642d3086c4d35cc3aa453a59d78534f1cd24d86e57d3342174"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:22:40+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_federated.py --suite uci --repeats 3 --jobs 3",
+    "commit": "00679818037414597087b9da16b3642e91ba90dc",
+    "dirty": false,
+    "params": {
+      "suite": "uci",
+      "repeats": 3,
+      "jobs": 3,
+      "wall_seconds": 1248.6,
+      "uci_configs": [
+        "cML-LR (paper)",
+        "cML-NN (paper)",
+        "Local-only NN",
+        "FedAvg-LR (paper)",
+        "FedAvg-NN (paper)",
+        "FedAvg_DP-SVT-LR (paper)",
+        "FedAvg_DP-SVT-NN (paper)",
+        "FedAvg_HE-LR (paper)",
+        "FedAvg_HE-NN (paper)",
+        "FedAvg_HE-NN per-tensor",
+        "FedProx-NN mu=0.01",
+        "FedProx-NN mu=0.1",
+        "SCAFFOLD-NN",
+        "FedAdam-NN",
+        "FedBN-NN",
+        "FedAvg-NN + fine-tune",
+        "FedAvg-NN class-weighted",
+        "FedAvg-LR class-weighted",
+        "FedAvg-MLP 16x2",
+        "FedProx-LR mu=0.01",
+        "SecAgg-NN",
+        "DP-SGD-LR eps=1",
+        "DP-SGD-LR eps=3",
+        "DP-SGD-LR eps=8",
+        "DP-SGD-NN eps=3",
+        "DP-SGD+HE-LR eps=3",
+        "DP-SGD+SecAgg-LR eps=3"
+      ],
+      "cardio_fl": {
+        "model": "paper_nn",
+        "rounds": 30,
+        "local_epochs": 2,
+        "lr": 0.01,
+        "batch_size": 1024,
+        "eval_every": 5
+      },
+      "paper_fl": {
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000
+      },
+      "fl_defaults": {
+        "model": "paper_nn",
+        "algorithm": "fedavg",
+        "privacy": "none",
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000,
+        "weight_decay": 0.01,
+        "local_optimizer": "adamw",
+        "prox_mu": 0.0,
+        "scaffold_lr": 0.1,
+        "server_lr": 0.05,
+        "server_beta1": 0.9,
+        "server_beta2": 0.99,
+        "server_tau": 0.001,
+        "loss": "bce",
+        "class_weight": false,
+        "dp_epsilon": 3.0,
+        "dp_delta": 1e-05,
+        "dp_clip": 1.0,
+        "dp_sample_rate": 0.1,
+        "dp_lr": 0.5,
+        "he_packed": true,
+        "dropout_prob": 0.0,
+        "finetune_epochs": 0,
+        "weighting": "n",
+        "eval_every": 5,
+        "seed": 0
+      }
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_uci_folds.csv": "fa95e294f0acf6d16b87200436fbbc1ded4798ce70eea385094f139289a4f6e7",
+      "results/p2_uci_persite.csv": "783a9737935137dbaba19204ec70c23cc964efa44bd83f5c4a967650c16a18e9",
+      "results/p2_uci_history.csv": "81f9b1e5452560e00a5895866d63abbc8d79fdc4788f035cb776125a0e908e83"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:29:45+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_federated.py --suite noniid --repeats 3 --jobs 3",
+    "commit": "00679818037414597087b9da16b3642e91ba90dc",
+    "dirty": true,
+    "params": {
+      "suite": "noniid",
+      "repeats": 3,
+      "jobs": 3,
+      "wall_seconds": 283.0,
+      "uci_configs": null,
+      "cardio_fl": {
+        "model": "paper_nn",
+        "rounds": 30,
+        "local_epochs": 2,
+        "lr": 0.01,
+        "batch_size": 1024,
+        "eval_every": 5
+      },
+      "paper_fl": {
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000
+      },
+      "fl_defaults": {
+        "model": "paper_nn",
+        "algorithm": "fedavg",
+        "privacy": "none",
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000,
+        "weight_decay": 0.01,
+        "local_optimizer": "adamw",
+        "prox_mu": 0.0,
+        "scaffold_lr": 0.1,
+        "server_lr": 0.05,
+        "server_beta1": 0.9,
+        "server_beta2": 0.99,
+        "server_tau": 0.001,
+        "loss": "bce",
+        "class_weight": false,
+        "dp_epsilon": 3.0,
+        "dp_delta": 1e-05,
+        "dp_clip": 1.0,
+        "dp_sample_rate": 0.1,
+        "dp_lr": 0.5,
+        "he_packed": true,
+        "dropout_prob": 0.0,
+        "finetune_epochs": 0,
+        "weighting": "n",
+        "eval_every": 5,
+        "seed": 0
+      }
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_noniid_folds.csv": "f3a9094add124519cc5873d926f96e81a51ba49c965d1b86c46cdc8d966ea7b6",
+      "results/p2_noniid_persite.csv": "90ea18b76bff728994363c65d97bc7434428d3bbd45f55363286675c81ee8d9d",
+      "results/p2_noniid_history.csv": "f31decbbc6459b92b9943f372d43001f504476050abad4aeda30d3858f272432"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:31:04+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_federated.py --suite clients --repeats 3 --jobs 3",
+    "commit": "00679818037414597087b9da16b3642e91ba90dc",
+    "dirty": true,
+    "params": {
+      "suite": "clients",
+      "repeats": 3,
+      "jobs": 3,
+      "wall_seconds": 60.4,
+      "uci_configs": null,
+      "cardio_fl": {
+        "model": "paper_nn",
+        "rounds": 30,
+        "local_epochs": 2,
+        "lr": 0.01,
+        "batch_size": 1024,
+        "eval_every": 5
+      },
+      "paper_fl": {
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000
+      },
+      "fl_defaults": {
+        "model": "paper_nn",
+        "algorithm": "fedavg",
+        "privacy": "none",
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000,
+        "weight_decay": 0.01,
+        "local_optimizer": "adamw",
+        "prox_mu": 0.0,
+        "scaffold_lr": 0.1,
+        "server_lr": 0.05,
+        "server_beta1": 0.9,
+        "server_beta2": 0.99,
+        "server_tau": 0.001,
+        "loss": "bce",
+        "class_weight": false,
+        "dp_epsilon": 3.0,
+        "dp_delta": 1e-05,
+        "dp_clip": 1.0,
+        "dp_sample_rate": 0.1,
+        "dp_lr": 0.5,
+        "he_packed": true,
+        "dropout_prob": 0.0,
+        "finetune_epochs": 0,
+        "weighting": "n",
+        "eval_every": 5,
+        "seed": 0
+      }
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_clients_folds.csv": "194323d565096583e190bb5ff028dd05d62c852ff789de4913272c6438b5f37d",
+      "results/p2_clients_persite.csv": "d4a902df915e5bb176875214e6fbc28514c7947fc9f0d7d34e90b6ba8b95ba08"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:38:16+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_federated.py --suite privacy --repeats 3 --jobs 3",
+    "commit": "fb545f622fe075ce08c8bf0c585faf420fcd0f67",
+    "dirty": false,
+    "params": {
+      "suite": "privacy",
+      "repeats": 3,
+      "jobs": 3,
+      "wall_seconds": 415.8,
+      "uci_configs": null,
+      "cardio_fl": {
+        "model": "paper_nn",
+        "rounds": 30,
+        "local_epochs": 2,
+        "lr": 0.01,
+        "batch_size": 1024,
+        "eval_every": 5
+      },
+      "paper_fl": {
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000
+      },
+      "fl_defaults": {
+        "model": "paper_nn",
+        "algorithm": "fedavg",
+        "privacy": "none",
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000,
+        "weight_decay": 0.01,
+        "local_optimizer": "adamw",
+        "prox_mu": 0.0,
+        "scaffold_lr": 0.1,
+        "server_lr": 0.05,
+        "server_beta1": 0.9,
+        "server_beta2": 0.99,
+        "server_tau": 0.001,
+        "loss": "bce",
+        "class_weight": false,
+        "dp_epsilon": 3.0,
+        "dp_delta": 1e-05,
+        "dp_clip": 1.0,
+        "dp_sample_rate": 0.1,
+        "dp_lr": 0.5,
+        "he_packed": true,
+        "dropout_prob": 0.0,
+        "finetune_epochs": 0,
+        "weighting": "n",
+        "eval_every": 5,
+        "seed": 0
+      }
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_privacy_folds.csv": "603004e36cc668b55e244c9b5eb2c56ec556d36f256542fd94311e1a6339b5c6",
+      "results/p2_privacy_persite.csv": "e171dc669074e73e3ac0599b1a42065223f78c5fb0eeb93851a9d3b818b5dca4"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T13:39:24+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_federated.py --suite imbalance --repeats 3 --jobs 3",
+    "commit": "fb545f622fe075ce08c8bf0c585faf420fcd0f67",
+    "dirty": false,
+    "params": {
+      "suite": "imbalance",
+      "repeats": 3,
+      "jobs": 3,
+      "wall_seconds": 47.1,
+      "uci_configs": null,
+      "cardio_fl": {
+        "model": "paper_nn",
+        "rounds": 30,
+        "local_epochs": 2,
+        "lr": 0.01,
+        "batch_size": 1024,
+        "eval_every": 5
+      },
+      "paper_fl": {
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000
+      },
+      "fl_defaults": {
+        "model": "paper_nn",
+        "algorithm": "fedavg",
+        "privacy": "none",
+        "rounds": 50,
+        "local_epochs": 20,
+        "lr": 0.01,
+        "batch_size": 20000,
+        "weight_decay": 0.01,
+        "local_optimizer": "adamw",
+        "prox_mu": 0.0,
+        "scaffold_lr": 0.1,
+        "server_lr": 0.05,
+        "server_beta1": 0.9,
+        "server_beta2": 0.99,
+        "server_tau": 0.001,
+        "loss": "bce",
+        "class_weight": false,
+        "dp_epsilon": 3.0,
+        "dp_delta": 1e-05,
+        "dp_clip": 1.0,
+        "dp_sample_rate": 0.1,
+        "dp_lr": 0.5,
+        "he_packed": true,
+        "dropout_prob": 0.0,
+        "finetune_epochs": 0,
+        "weighting": "n",
+        "eval_every": 5,
+        "seed": 0
+      }
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p2_imbalance_folds.csv": "b0eba69004e7670fd62cfd557165a744c1cf5f031ad769ea077456bb36e5a97e",
+      "results/p2_imbalance_persite.csv": "851f652f2dbbdc9a77cb039c6a4da71324f89837c775a776ba02a9876596d980"
+    }
+  },
+  {
+    "time_utc": "2026-10-22T14:01:13+00:00",
+    "command": "python.exe C:\\Users\\vaibh\\Documents\\fedcardio\\experiments\\run_centralized.py --dataset cardio --repeats 1 --folds 5 --budget 10 --jobs 3",
+    "commit": "5a501c46802cce97476da1c7a0b46dc221b5a7e5",
+    "dirty": true,
+    "params": {
+      "dataset": "cardio",
+      "repeats": 1,
+      "folds": 5,
+      "budget": 10,
+      "models": [
+        "paper_lr",
+        "paper_nn",
+        "tuned_mlp",
+        "xgboost",
+        "lightgbm",
+        "random_forest"
+      ],
+      "jobs": 3,
+      "tag": "",
+      "cv_random_state": 42,
+      "wall_seconds": 1295.8
+    },
+    "data_sha256": {
+      "uci_heart": {
+        "url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+        "sha256": {
+          "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+          "processed.hungarian.data": "d1ad108f785768cd3d7e82dc522e6f5a61eea93cccfb3a46ee8076f73fc3d796",
+          "processed.switzerland.data": "834a405ccf5b66ab4056bb77794adc8df0b7125186454c0a1d002d33c6c3b314",
+          "processed.va.data": "e7c93d8d0d2acdadfa4c5e8de768e2191e7f618b952e29623f1f0d5949ff6b8f"
+        }
+      },
+      "cardio70k": {
+        "url": "https://www.kaggle.com/api/v1/datasets/download/sulianova/cardiovascular-disease-dataset",
+        "sha256": {
+          "cardio_train.csv": "21a705d23381b0dfd6a6416da701b490744f1fc3b47e9ff3db3968c420ffa10c"
+        }
+      }
+    },
+    "outputs": {
+      "results/p1_cardio_folds.csv": "86ac3f576c827fdcf34054242d8f33f0ac80e8d4f4e3b7ef8acc443bc00f517b"
+    }
+  }
+]

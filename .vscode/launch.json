@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "1. Download data",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "fl_engine.data.download",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "2. Quick demo run (UCI, 1x2 folds, ~1 min)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "experiments.run_centralized",
+      "args": ["--dataset", "uci", "--repeats", "1", "--folds", "2", "--budget", "2", "--jobs", "2", "--tag", "_demo"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "3. Full UCI baselines (5x5 CV)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "experiments.run_centralized",
+      "args": ["--dataset", "uci", "--repeats", "5", "--folds", "5", "--budget", "20", "--jobs", "4"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "4. Build results tables (results/p1_tables.md)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "experiments.make_tables",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

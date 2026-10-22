@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run all tests",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe -m pytest -q -p no:warnings --cov=fl_engine",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Watch experiment log",
+      "type": "shell",
+      "command": "Get-Content results\\_p1_cardio.log -Wait -Tail 20",
+      "options": { "shell": { "executable": "powershell.exe" } },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

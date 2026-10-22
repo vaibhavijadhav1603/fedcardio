@@ -1,0 +1,22 @@
+# FL engine + experiments (compiled to requirements.lock with pip-tools)
+numpy<2.3
+pandas
+scipy
+scikit-learn
+torch
+xgboost
+lightgbm
+optuna
+shap
+matplotlib
+pyyaml
+tenseal==0.3.18
+opacus==1.6.0
+flwr==1.41.0
+requests
+pypdf
+# dev
+pytest
+pytest-cov
+ruff
+pip-tools

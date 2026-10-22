@@ -16,3 +16,5 @@ node_modules/
 *.pem
 secrets/
 results/_*.log
+backend/fedcardio.db
+backend/.dev-kms/

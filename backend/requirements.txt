@@ -1,0 +1,16 @@
+fastapi>=0.138,<0.139
+uvicorn[standard]>=0.49,<0.50
+sqlalchemy>=2.0.45,<3
+alembic>=1.18.1,<2
+pydantic-settings==2.11.0
+email-validator==2.3.0
+pyjwt==2.10.1
+pyotp==2.9.0
+cryptography>=50,<51
+fhir.resources==8.1.0
+psycopg[binary]==3.2.12
+numpy
+pandas
+httpx
+pytest
+pytest-cov

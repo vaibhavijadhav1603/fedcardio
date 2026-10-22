@@ -116,7 +116,9 @@ def _norm_mask(model: torch.nn.Module) -> torch.Tensor:
                       for n, p in model.named_parameters()])
 
 
-def run_federated(clients: list[Client], cfg: FLConfig, X_monitor=None, y_monitor=None) -> FLResult:
+def run_federated(clients: list[Client], cfg: FLConfig, X_monitor=None, y_monitor=None,
+                  on_round=None, should_stop=None) -> FLResult:
+    """on_round(entry) is called after each evaluation; should_stop() -> True aborts between rounds."""
     from sklearn.metrics import roc_auc_score
 
     set_seed(cfg.seed)
@@ -230,8 +232,13 @@ def run_federated(clients: list[Client], cfg: FLConfig, X_monitor=None, y_monito
         if X_monitor is not None and ((rnd + 1) % cfg.eval_every == 0 or rnd == cfg.rounds - 1):
             p = predict_proba(global_model, X_monitor)
             auc = roc_auc_score(y_monitor, p) if len(np.unique(y_monitor)) == 2 else float("nan")
-            res.history.append({"round": rnd + 1, "val_auroc": auc, "participants": len(alive),
-                                "elapsed_s": time.perf_counter() - t_start})
+            entry = {"round": rnd + 1, "val_auroc": auc, "participants": len(alive),
+                     "elapsed_s": time.perf_counter() - t_start, "bytes_up": res.bytes_up}
+            res.history.append(entry)
+            if on_round is not None:
+                on_round(entry)
+        if should_stop is not None and should_stop():
+            break
 
     res.global_model = global_model
     if cfg.algorithm == "fedbn" or cfg.finetune_epochs > 0:

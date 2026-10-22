@@ -52,7 +52,10 @@ centralised LR on UCI. All datasets differ from the paper's, so nothing here is 
 
 ## Deviations / limitations
 - The Phase 1 Cardio baselines were cut from 2×5 folds and 20 trials to 1×5 folds and 10 trials (same budget for every model) after the
-  first run exhausted RAM. UCI used the full 5×5 / 20.
+  first run exhausted RAM. The Phase 1 *centralised* UCI baseline files (`p1_uci_*.csv`) are **not in the repo**: a 5×5 / 20-trial
+  run was done earlier in development but its outputs were deleted before a rerun that was not performed. The UCI centralised
+  paper models (cML-LR, cML-NN) are still evaluated on identical folds inside the Phase 2 UCI suite (`p2_uci_folds.csv`).
+  To regenerate: `python -m experiments.run_centralized --dataset uci --repeats 5 --folds 5 --budget 20`.
 - FL runs use 50 rounds (paper: 250); FL-LR is a torch LR with AdamW, not warm-started liblinear.
 - Pooled validation scores stand in for a federated ROC built from per-site score histograms.
 - Membership inference was weak for all mechanisms; DP's effect was not separable from the training-regime change.

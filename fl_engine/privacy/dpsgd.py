@@ -40,7 +40,7 @@ def dp_sgd_train(model: torch.nn.Module, X: np.ndarray, y: np.ndarray, *, steps:
         out = functional_call(model, p, (x.unsqueeze(0),))
         return F.binary_cross_entropy_with_logits(out, t.unsqueeze(0), pos_weight=pw)
 
-    per_ex_grad = vmap(grad(loss_one), in_dims=(None, 0, 0))
+    per_ex_grad = vmap(grad(loss_one), in_dims=(None, 0, 0), randomness="different")
     n = len(Xt)
     expected = max(1.0, sample_rate * n)
     gen = torch.Generator().manual_seed(int(rng.integers(2**31)))

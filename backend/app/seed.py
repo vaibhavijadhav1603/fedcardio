@@ -73,6 +73,8 @@ def seed(reset: bool = False, patients_per_site: int = 40):
     except Exception as e:  # noqa: BLE001
         raise SystemExit(f"UCI data missing; run `python -m fl_engine.data.download` first ({e})") from e
     now_year = datetime.now(timezone.utc).year
+    names_pool = [f"{a} {b}" for a in FIRST for b in LAST]
+    rnd.shuffle(names_pool)  # unique synthetic names
     clinicians = {u.hospital_id: u for u in db.query(User).filter_by(role=Role.clinician)}
     for code, h in hs.items():
         g = df[df.site == code].sample(n=min(patients_per_site, (df.site == code).sum()), random_state=1)
@@ -82,7 +84,7 @@ def seed(reset: bool = False, patients_per_site: int = 40):
         for i, (_, r) in enumerate(g.iterrows()):
             feats = {k: float(r[k]) for k in ("trestbps", "chol", "thalach", "oldpeak", "fbs", "exang", "cp", "restecg")
                      if not np.isnan(r[k])}
-            p = create_patient_record(db, h, f"{code}-{i:04d}", f"{rnd.choice(FIRST)} {rnd.choice(LAST)}",
+            p = create_patient_record(db, h, f"{code}-{i:04d}", names_pool.pop(),
                                       "male" if r["sex"] == 1 else "female", int(now_year - r["age"]), feats)
             if i % 2 == 0:
                 db.add(Consent(patient_id=p.id, purpose=rnd.choice(["treatment", "care_coordination"]),

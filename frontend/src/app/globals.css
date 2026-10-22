@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- design tokens: calm clinical palette (teal primary, indigo accent) ---------- */
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --surface-3: #e8edf5;
+  --border: #e3e8f0;
+  --border-strong: #cbd5e1;
+  --fg: #0d1526;
+  --muted: #5b6b84;
+  --subtle: #627085;
+  --primary: #0f766e;
+  --primary-hover: #0d6560;
+  --primary-soft: #e6f5f3;
+  --primary-fg: #ffffff;
+  --accent: #4f46e5;
+  --accent-soft: #eef0ff;
+  --ring: #14b8a6;
+  --success: #047857;
+  --success-soft: #e7f6ef;
+  --warning: #b45309;
+  --warning-soft: #fdf4e3;
+  --danger: #be123c;
+  --danger-soft: #fdecef;
+  --chart-1: #0f766e;
+  --chart-2: #4f46e5;
+  --chart-3: #d97706;
+  --chart-4: #db2777;
+  --chart-5: #0891b2;
+  --chart-6: #65a30d;
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+}
+
+:root:not([data-theme="light"]).dark,
+.dark {
+  --bg: #070b14;
+  --surface: #0d1424;
+  --surface-2: #121b2e;
+  --surface-3: #18233a;
+  --border: #1d2840;
+  --border-strong: #2b3a57;
+  --fg: #e7edf7;
+  --muted: #95a3bb;
+  --subtle: #8795ad;
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-soft: #0c2a2a;
+  --primary-fg: #042220;
+  --accent: #8b93ff;
+  --accent-soft: #1a1c3d;
+  --ring: #2dd4bf;
+  --success: #34d399;
+  --success-soft: #0b2a20;
+  --warning: #fbbf24;
+  --warning-soft: #2c210a;
+  --danger: #fb7185;
+  --danger-soft: #2f1019;
+  --chart-1: #2dd4bf;
+  --chart-2: #8b93ff;
+  --chart-3: #fbbf24;
+  --chart-4: #f472b6;
+  --chart-5: #22d3ee;
+  --chart-6: #a3e635;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -8px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-card: var(--shadow);
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* subtle dotted grid used on hero panels */
+.bg-grid {
+  background-image: radial-gradient(color-mix(in oklab, var(--fg) 12%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}

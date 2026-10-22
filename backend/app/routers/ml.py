@@ -273,3 +273,16 @@ def export_audit(action: str = "", actor: str = "", outcome: str = "",
     audit.log(db, "audit.export", user=user)
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=audit_log.csv"})
+
+
+class FeedbackIn(BaseModel):
+    model_id: str = Field(max_length=80)
+    helpful: bool
+    comment: str = Field(default="", max_length=1000)
+
+
+@router.post("/feedback", status_code=201)
+def feedback(body: FeedbackIn, user: User = Depends(require(Perm.predict)), db: Session = Depends(get_db)):
+    audit.log(db, "model.feedback", user=user, resource=f"model:{body.model_id}",
+              detail={"helpful": body.helpful, "comment": body.comment})
+    return {"ok": True}

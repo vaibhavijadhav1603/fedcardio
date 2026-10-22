@@ -1,0 +1,60 @@
+// English strings. Add hi.ts / kn.ts with the same keys to localise (Hindi, Kannada).
+const en = {
+  app: {
+    name: "FedCardio",
+    tagline: "Privacy-preserving federated learning for cardiovascular risk",
+    banner: "Research prototype — not clinically validated. Do not use for patient care decisions.",
+  },
+  nav: {
+    risk: "Risk assessment",
+    sharing: "Record sharing",
+    federated: "Federated training",
+    results: "Experiments",
+    models: "Model registry",
+    admin: "Administration",
+    audit: "Audit log",
+    sectionClinical: "Clinical",
+    sectionResearch: "Research",
+    sectionGovernance: "Governance",
+  },
+  login: {
+    title: "Sign in",
+    subtitle: "Use your hospital account. All access is logged.",
+    email: "Work email",
+    password: "Password",
+    submit: "Sign in",
+    mfaTitle: "Two-step verification",
+    mfaSubtitle: "Enter the 6-digit code from your authenticator app.",
+    verify: "Verify",
+    demo: "Demo accounts",
+    expired: "Your session expired. Please sign in again.",
+  },
+  common: {
+    search: "Search",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    save: "Save",
+    retry: "Try again",
+    loading: "Loading…",
+    empty: "Nothing here yet",
+    error: "Something went wrong",
+    signOut: "Sign out",
+    theme: "Theme",
+    language: "Language",
+    download: "Download",
+  },
+  risk: {
+    title: "Cardiovascular risk assessment",
+    subtitle: "Calibrated probability of angiographic coronary disease from the federated model.",
+    searchPatients: "Search patients by name or pseudonym",
+    assess: "Assess risk",
+    manual: "Manual entry",
+    probability: "Calibrated probability",
+    threshold: "Decision threshold",
+    drivers: "What drives this estimate",
+    feedback: "Was this helpful?",
+  },
+} as const;
+
+export default en;
+export type Messages = typeof en;

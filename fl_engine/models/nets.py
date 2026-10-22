@@ -89,12 +89,13 @@ def train_torch(model: nn.Module, X: np.ndarray, y: np.ndarray, *, epochs: int, 
                 X_val: np.ndarray | None = None, y_val: np.ndarray | None = None,
                 patience: int | None = None, loss: str = "bce", pos_weight: float | None = None,
                 prox_mu: float = 0.0, prox_ref: list[torch.Tensor] | None = None,
-                grad_hook=None) -> nn.Module:
+                grad_hook=None, optimizer: str = "adamw") -> nn.Module:
     """AdamW training (matches the paper's learner). Optional early stopping on val loss,
     FedProx proximal term, and a per-step gradient hook (used by SCAFFOLD)."""
     g = torch.Generator().manual_seed(seed)
     Xt, yt = torch.as_tensor(X, dtype=torch.float32), torch.as_tensor(y, dtype=torch.float32)
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    opt = (torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay) if optimizer == "adamw"
+           else torch.optim.SGD(model.parameters(), lr=lr))
     crit = make_loss(loss, pos_weight)
     best, best_loss, bad = None, float("inf"), 0
     n = len(Xt)

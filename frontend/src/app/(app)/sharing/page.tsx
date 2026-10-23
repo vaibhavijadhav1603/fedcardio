@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import {
-  ArrowDownLeft, ArrowUpRight, Ban, Check, Clock, Eye, FileLock2, KeyRound, Lock, Plus, Search, Share2, ShieldCheck, X,
+  ArrowDownLeft, ArrowUpRight, Ban, Check, Clock, Eye, FileLock2, IdCard, KeyRound, Lock, Plus, Search, Share2, ShieldCheck, UserSearch, X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -171,6 +171,10 @@ function ShareTable({ rows, perspective, onDecide, onRevoke, onView, empty }: {
 }
 
 function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void }) {
+  const [mode, setMode] = useState<"details" | "id">("details");
+  const [name, setName] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [sex, setSex] = useState("female");
   const [pseudo, setPseudo] = useState("");
   const [found, setFound] = useState<{ pseudo_id: string; hospital_name: string } | null>(null);
   const [lookupErr, setLookupErr] = useState<string | null>(null);
@@ -182,7 +186,14 @@ function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
     setLookupErr(null);
     setFound(null);
     try {
-      setFound(await api(`/patients/directory?pseudo_id=${encodeURIComponent(pseudo.trim())}`));
+      if (mode === "id") {
+        setFound(await api(`/patients/directory?pseudo_id=${encodeURIComponent(pseudo.trim())}`));
+      } else {
+        const qs = new URLSearchParams({ name: name.trim(), birth_year: birthYear, sex });
+        const hit = await api<{ pseudo_id: string; hospital_name: string }>(`/patients/match?${qs}`);
+        setPseudo(hit.pseudo_id);
+        setFound(hit);
+      }
     } catch (e) {
       setLookupErr((e as Error).message);
     }
@@ -193,7 +204,7 @@ function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
       await api("/shares", { method: "POST", json: { pseudo_id: pseudo.trim(), purpose, justification: why } });
       toast.success("Request sent", { description: `The record owner at ${found?.hospital_name} will review it.` });
       onOpenChange(false);
-      setPseudo(""); setFound(null); setWhy("");
+      setPseudo(""); setName(""); setBirthYear(""); setFound(null); setWhy("");
       onDone();
     } catch (e) {
       toast.error("Request failed", { description: (e as Error).message });
@@ -202,18 +213,49 @@ function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
     }
   }
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Request a patient record" description="Records are located by pseudonymous ID only. Requests and every view are audited."
+    <Dialog open={open} onOpenChange={onOpenChange} title="Request a patient record" description="Find the patient by their details or their ID. Requests and every search are audited."
       footer={<><Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={submit} loading={busy} disabled={!found || why.trim().length < 10}>Send request</Button></>}>
       <div className="grid gap-4">
-        <Field label="Patient pseudonym" htmlFor="pseudo" error={lookupErr} hint="Format PX-XXXXXXXXXXXXXXXX">
-          <div className="flex gap-2">
-            <Input id="pseudo" value={pseudo} onChange={(e) => { setPseudo(e.target.value.toUpperCase()); setFound(null); }} placeholder="PX-…" className="font-mono" />
-            <Button variant="secondary" onClick={lookup} disabled={pseudo.trim().length < 6}><Search /> Find</Button>
+        <Tabs value={mode} onValueChange={(v) => { setMode(v as "details" | "id"); setFound(null); setLookupErr(null); }}>
+          <TabsList>
+            <TabsTrigger value="details"><UserSearch /> Patient details</TabsTrigger>
+            <TabsTrigger value="id"><IdCard /> I have the ID</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {mode === "details" ? (
+          <div className="grid gap-3">
+            <Field label="Full name" htmlFor="mname" hint="Exact name as registered at the other hospital">
+              <Input id="mname" value={name} onChange={(e) => { setName(e.target.value); setFound(null); }} placeholder="e.g. Arjun Weber" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Birth year" htmlFor="myear">
+                <Input id="myear" inputMode="numeric" value={birthYear} onChange={(e) => { setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4)); setFound(null); }} placeholder="e.g. 1968" />
+              </Field>
+              <Field label="Sex" htmlFor="msex">
+                <NativeSelect id="msex" value={sex} onChange={(e) => { setSex(e.target.value); setFound(null); }}>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </NativeSelect>
+              </Field>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="secondary" onClick={lookup} disabled={name.trim().length < 3 || birthYear.length !== 4}><Search /> Find patient</Button>
+              <span className="text-[12px] text-muted">All three must match exactly one patient. Every search is audited.</span>
+            </div>
+            {lookupErr && <p role="alert" className="text-[12.5px] text-danger">{lookupErr}</p>}
           </div>
-        </Field>
+        ) : (
+          <Field label="Patient ID" htmlFor="pseudo" error={lookupErr} hint="From the patient's ID card or a referral letter. Format PX-XXXXXXXXXXXXXXXX">
+            <div className="flex gap-2">
+              <Input id="pseudo" value={pseudo} onChange={(e) => { setPseudo(e.target.value.toUpperCase()); setFound(null); }} placeholder="PX-…" className="font-mono" />
+              <Button variant="secondary" onClick={lookup} disabled={pseudo.trim().length < 6}><Search /> Find</Button>
+            </div>
+          </Field>
+        )}
         {found && (
           <div className="flex items-center gap-2 rounded-xl bg-success-soft px-3 py-2 text-[13px] text-success">
             <Check className="size-4" /> Record held by <strong>{found.hospital_name}</strong>
+            <span className="ml-auto font-mono text-[12px]">{found.pseudo_id}</span>
           </div>
         )}
         <Field label="Purpose" htmlFor="purpose" hint="Purpose limitation: the record can only be used for this purpose.">

@@ -245,3 +245,18 @@ def test_logout_revokes_session(client):
     client.post("/auth/login", json={"email": USERS["clinician"], "password": "FedCardio!2026"})
     assert client.post("/auth/logout").json() == {"ok": True}
     assert client.post("/auth/refresh", headers={"X-Requested-With": "fedcardio"}).status_code == 401
+
+
+def test_match_lookup_by_name_birth_year_sex(client, tokens):
+    target = client.get("/patients", headers=tokens["clinician_hu"]).json()[0]
+    q = {"name": f"  {target['display_name'].upper()} ", "birth_year": target["birth_year"], "sex": target["sex"]}
+    r = client.get("/patients/match", params=q, headers=tokens["clinician"])
+    assert r.status_code == 200 and r.json()["pseudo_id"] == target["pseudo_id"]
+    # wrong birth year or partial name -> no match; own hospital's patients are never returned
+    assert client.get("/patients/match", params={**q, "birth_year": target["birth_year"] + 1},
+                      headers=tokens["clinician"]).status_code == 404
+    assert client.get("/patients/match", params={**q, "name": target["display_name"].split()[0]},
+                      headers=tokens["clinician"]).status_code == 404
+    assert client.get("/patients/match", params=q, headers=tokens["clinician_hu"]).status_code == 404
+    # roles without share:request are refused
+    assert client.get("/patients/match", params=q, headers=tokens["auditor"]).status_code == 403

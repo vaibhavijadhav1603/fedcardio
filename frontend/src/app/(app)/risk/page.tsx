@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Activity, AlertTriangle, CalendarClock, FileHeart, Info, Search, ShieldCheck, ThumbsDown, ThumbsUp, UserRound,
+  Activity, AlertTriangle, CalendarClock, Copy, FileHeart, IdCard, Info, Printer, Search, ShieldCheck, ThumbsDown, ThumbsUp, UserRound,
   Wand2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,6 +23,7 @@ interface PatientRow {
   display_name: string;
   sex: string;
   age: number;
+  birth_year: number;
   hospital_name: string;
 }
 interface PatientFull extends PatientRow {
@@ -201,6 +202,7 @@ function PatientCard({ patient, loading, error, onRetry, onAssess, busy }: {
   onAssess: () => void;
   busy: boolean;
 }) {
+  const [idOpen, setIdOpen] = useState(false);
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
   if (loading || !patient) return <Card className="p-6"><LoadingRows rows={3} /></Card>;
   const f = patient.features;
@@ -220,8 +222,14 @@ function PatientCard({ patient, loading, error, onRetry, onAssess, busy }: {
         icon={<UserRound />}
         title={patient.display_name}
         description={<span className="font-mono">{patient.pseudo_id} · {patient.age} years · {patient.sex}</span>}
-        action={<Button onClick={onAssess} loading={busy}><Activity /> Assess risk</Button>}
+        action={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setIdOpen(true)}><IdCard /> ID card</Button>
+            <Button onClick={onAssess} loading={busy}><Activity /> Assess risk</Button>
+          </div>
+        }
       />
+      <IdCardDialog patient={patient} open={idOpen} onOpenChange={setIdOpen} />
       <CardBody>
         <Tabs defaultValue="record">
           <TabsList>
@@ -248,6 +256,36 @@ function PatientCard({ patient, loading, error, onRetry, onAssess, busy }: {
         </Tabs>
       </CardBody>
     </Card>
+  );
+}
+
+function IdCardDialog({ patient, open, onOpenChange }: { patient: PatientFull; open: boolean; onOpenChange: (o: boolean) => void }) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(patient.pseudo_id);
+      toast.success("Patient ID copied");
+    } catch {
+      toast.error("Could not copy", { description: "Select the ID and copy it manually." });
+    }
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title="Patient ID card"
+      description="Give this ID to the patient (printed card or referral letter). Another hospital needs it, or the patient's exact details, to request this record."
+      footer={<><Button variant="secondary" onClick={() => window.print()}><Printer /> Print</Button><Button onClick={copy}><Copy /> Copy ID</Button></>}>
+      <div className="rounded-2xl bg-gradient-to-br from-primary to-accent p-5 text-white shadow-lg">
+        <div className="flex items-center justify-between text-[11.5px] font-medium uppercase tracking-wider opacity-90">
+          <span>FedCardio health ID</span>
+          <IdCard className="size-4" aria-hidden />
+        </div>
+        <div data-testid="id-name" className="mt-4 text-[18px] font-semibold">{patient.display_name}</div>
+        <div className="mt-1 select-all font-mono text-[20px] tracking-wide">{patient.pseudo_id}</div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-[12px]">
+          <div><div className="opacity-80">Born</div><div className="font-medium">{patient.birth_year}</div></div>
+          <div><div className="opacity-80">Sex</div><div className="font-medium capitalize">{patient.sex}</div></div>
+          <div><div className="opacity-80">Registered at</div><div className="font-medium">{patient.hospital_name}</div></div>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 

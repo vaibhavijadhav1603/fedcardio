@@ -61,15 +61,27 @@ test("cross-hospital sharing: request, consent, approve, view, revoke", async ({
   const target = hu.getByRole("option").nth(1);
   const pseudo = (await target.locator(".font-mono").innerText()).trim();
   await target.click();
+  // the patient's ID card carries the details another hospital needs
+  await hu.getByRole("button", { name: "ID card" }).click();
+  const card = hu.getByRole("dialog");
+  await expect(card.getByText(pseudo)).toBeVisible();
+  const name = (await card.getByTestId("id-name").innerText()).trim();
+  const born = (await card.getByText("Born").locator("xpath=following-sibling::div").innerText()).trim();
+  const sex = (await card.getByText("Sex", { exact: true }).locator("xpath=following-sibling::div").innerText()).trim().toLowerCase();
+  await a11y(hu, "id card");
+  await hu.keyboard.press("Escape");
 
   // Cleveland clinician requests it
   const cl = await newPage();
   await login(cl, "dr.cleveland@fedcardio.dev");
   await cl.getByRole("link", { name: "Record sharing" }).click();
   await cl.getByRole("button", { name: "New request" }).first().click();
-  await cl.getByLabel("Patient pseudonym").fill(pseudo);
-  await cl.getByRole("button", { name: "Find" }).click();
+  await cl.getByLabel("Full name").fill(name);
+  await cl.getByLabel("Birth year").fill(born);
+  await cl.getByLabel("Sex").selectOption(sex);
+  await cl.getByRole("button", { name: "Find patient" }).click();
   await expect(cl.getByText(/Record held by/)).toBeVisible();
+  await expect(cl.getByRole("dialog").getByText(pseudo)).toBeVisible();
   await cl.getByLabel("Clinical justification").fill("Transferred to our cardiology ward for angiography");
   await cl.getByRole("button", { name: "Send request" }).click();
   await expect(cl.getByText("Request sent")).toBeVisible();

@@ -14,7 +14,8 @@ Last updated 2026-10-22. Runs on **localhost** (deployment deferred at the user'
 - **Phase 3**: FastAPI backend: password + TOTP MFA, short-lived JWT + rotating refresh cookie with reuse detection, 5-role RBAC
   (deny by default; platform admin has no patient access), per-hospital tenants, FHIR R4B patients/observations/consent,
   envelope encryption (AES-256-GCM, per-hospital KEK; file KMS stub marked insecure), consent → share → approve → view →
-  revoke with key destruction, hash-chained audit log with tamper detection and CSV export, rate limiting, security headers,
+  revoke with key destruction, patient lookup by exact name + birth year + sex (MPI-style, audited, ambiguous matches refused) or by
+  the ID on the patient's ID card, hash-chained audit log with tamper detection and CSV export, rate limiting, security headers,
   model serving (calibrated probability, threshold, Shapley drivers, OOD warning), model promote/rollback, FL job orchestration.
 - **Phase 4**: Next.js + Tailwind web app: login + MFA; clinician risk dashboard (gauge, drivers, plain-language explanation,
   consent, FHIR view, feedback); record sharing; FL console with live curves and privacy-budget meter; experiments explorer;
@@ -23,7 +24,7 @@ Last updated 2026-10-22. Runs on **localhost** (deployment deferred at the user'
 ## Tests (real outputs)
 - Engine: `pytest tests`: 22 (Phase 1) + 6 (zoo) + 16 (FL/privacy) tests, all passing. Includes FedAvg == centralised GD in the IID
   full-participation limit, CKKS error < 1e-4, SecAgg masks cancel, DP accountant monotone, SVT sparsity/clipping.
-- Backend: `pytest backend/tests`: **84 passed, 90% coverage** (role × endpoint matrix, tenant isolation, consent/revocation cascade,
+- Backend: `pytest backend/tests`: **85 passed** (role × endpoint matrix, tenant isolation, consent/revocation cascade,
   audit tamper detection, refresh-token reuse, MFA, prediction, an end-to-end HE training job).
 - Frontend: Playwright, **7/7 flows passing** with axe WCAG 2.2 A/AA checks (no serious or critical violations). Axe found and I fixed
   low-contrast text, misused tabs and unlabeled charts.

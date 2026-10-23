@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from .. import audit
@@ -76,6 +76,25 @@ def directory(pseudo_id: str = Query(min_length=6, max_length=40), user: User = 
     if p is None or p.hospital_id == user.hospital_id:
         raise HTTPException(404, "no external record with that pseudonym")
     audit.log(db, "patient.directory_lookup", user=user, resource=f"patient:{p.pseudo_id}")
+    return {"pseudo_id": p.pseudo_id, "hospital_id": p.hospital_id, "hospital_name": p.hospital.name}
+
+
+@router.get("/patients/match")
+def match(name: str = Query(min_length=3, max_length=120), birth_year: int = Query(ge=1900, le=2026),
+          sex: str = Query(pattern="^(male|female)$"), user: User = Depends(require(Perm.share_request)),
+          db: Session = Depends(get_db)):
+    """Master-patient-index style lookup: exact name + birth year + sex at another hospital. No browsing,
+    no partial matches; ambiguous results are refused so the requester must ask for the pseudonym."""
+    hits = (db.query(Patient)
+            .filter(Patient.hospital_id != user.hospital_id, Patient.birth_year == birth_year, Patient.sex == sex,
+                    func.lower(Patient.display_name) == " ".join(name.split()).lower())
+            .limit(2).all())
+    audit.log(db, "patient.match_lookup", user=user, resource=f"matches:{len(hits)}")
+    if not hits:
+        raise HTTPException(404, "no exact match at another hospital")
+    if len(hits) > 1:
+        raise HTTPException(409, "more than one patient matches; ask the patient for their ID")
+    p = hits[0]
     return {"pseudo_id": p.pseudo_id, "hospital_id": p.hospital_id, "hospital_name": p.hospital.name}
 
 

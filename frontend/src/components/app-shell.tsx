@@ -3,7 +3,7 @@
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import {
   Activity, BrainCircuit, Building2, ChevronDown, FlaskConical, Globe, LogOut, Menu, Monitor, Moon, Network,
-  ScrollText, Share2, ShieldAlert, Sun, X,
+  ScrollText, Share2, Sun, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -110,13 +110,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div
-          role="note"
-          className="flex items-center justify-center gap-2 border-b border-warning/25 bg-warning-soft px-4 py-1.5 text-center text-[12.5px] font-medium text-warning"
-        >
-          <ShieldAlert className="size-3.5 shrink-0" aria-hidden />
-          {m.app.banner}
-        </div>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur-md md:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu />

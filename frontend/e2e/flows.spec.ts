@@ -38,7 +38,6 @@ test("login page is accessible and rejects bad credentials", async ({ page }) =>
 test("clinician assesses a patient's risk with explanation and gives feedback", async ({ page }) => {
   await login(page, "dr.cleveland@fedcardio.dev");
   await expect(page).toHaveURL(/\/risk/);
-  await expect(page.getByText("Research prototype — not clinically validated")).toBeVisible();
   await page.getByRole("option").first().click();
   await expect(page.getByRole("tab", { name: "Record" })).toBeVisible();
   await page.getByRole("button", { name: "Assess risk" }).first().click();

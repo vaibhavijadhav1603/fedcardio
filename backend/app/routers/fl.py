@@ -85,11 +85,11 @@ def _run(job_id: int):
         extra = {}
         if "dpsgd" in cfg_d["privacy"]:
             extra = {"dp_sample_rate": 0.2, "dp_lr": 0.5, "local_epochs": 1}
-        cfg = FLConfig(model=cfg_d["model"], algorithm=cfg_d["algorithm"], privacy=cfg_d["privacy"],
-                       rounds=cfg_d["rounds"], local_epochs=cfg_d["local_epochs"], lr=cfg_d["lr"],
-                       batch_size=20000, prox_mu=cfg_d["prox_mu"], dp_epsilon=cfg_d["dp_epsilon"],
-                       class_weight=cfg_d["class_weight"], dropout_prob=cfg_d["dropout_prob"], eval_every=1,
-                       **extra)
+        cfg = FLConfig(**{**dict(model=cfg_d["model"], algorithm=cfg_d["algorithm"], privacy=cfg_d["privacy"],
+                                 rounds=cfg_d["rounds"], local_epochs=cfg_d["local_epochs"], lr=cfg_d["lr"],
+                                 batch_size=20000, prox_mu=cfg_d["prox_mu"], dp_epsilon=cfg_d["dp_epsilon"],
+                                 class_weight=cfg_d["class_weight"], dropout_prob=cfg_d["dropout_prob"],
+                                 eval_every=1), **extra})
         Xv = np.vstack([c.X_val for c in clients])
         yv = np.concatenate([c.y_val for c in clients])
         stop = _cancel.setdefault(job_id, threading.Event())

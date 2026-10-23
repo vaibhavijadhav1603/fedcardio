@@ -228,6 +228,20 @@ def test_fl_job_runs_end_to_end(client, tokens):
     assert len(j["history"]) == 3 and 0 < j["metrics"]["auroc"] <= 1 and j["metrics"]["he_max_abs_error"] < 1e-3
 
 
+
+def test_fl_job_with_dpsgd_runs(client, tokens):
+    r = client.post("/fl/jobs", headers=tokens["data_scientist"],
+                    json={"model": "lr", "algorithm": "fedavg", "privacy": "dpsgd+secagg", "rounds": 2, "dp_epsilon": 3})
+    assert r.status_code == 201, r.text
+    jid = r.json()["id"]
+    for _ in range(240):
+        j = client.get(f"/fl/jobs/{jid}", headers=tokens["data_scientist"]).json()
+        if j["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.5)
+    assert j["status"] == "completed", j["error"]
+    assert len(j["history"]) == 2 and 0 < j["epsilon"] <= 3.0 + 1e-6
+
 def test_results_summary_and_file_download(client, tokens):
     s = client.get("/results/summary", headers=tokens["data_scientist"]).json()
     assert "paper_table2" in s and len(s["paper_table2"]) == 8

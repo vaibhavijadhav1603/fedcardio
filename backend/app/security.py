@@ -57,13 +57,15 @@ class Perm(str, Enum):
     audit_export = "audit:export"
     user_manage = "user:manage"
     hospital_manage = "hospital:manage"
+    dataset_manage = "dataset:manage"
 
 
 ROLE_PERMS: dict[Role, set[Perm]] = {
     Role.platform_admin: {Perm.fl_view, Perm.results_view, Perm.model_view, Perm.model_promote,
                           Perm.audit_view, Perm.user_manage, Perm.hospital_manage},
     Role.hospital_admin: {Perm.share_decide, Perm.consent_manage, Perm.fl_view, Perm.results_view,
-                          Perm.model_view, Perm.audit_view, Perm.user_manage, Perm.patient_read},
+                          Perm.model_view, Perm.audit_view, Perm.user_manage, Perm.patient_read,
+                          Perm.dataset_manage},
     Role.clinician: {Perm.patient_read, Perm.patient_write, Perm.share_request, Perm.share_view,
                      Perm.consent_manage, Perm.predict, Perm.model_view, Perm.results_view},
     Role.data_scientist: {Perm.fl_view, Perm.fl_run, Perm.results_view, Perm.model_view},
@@ -115,6 +117,11 @@ def issue_refresh(db: Session, user: User, family: str | None = None) -> str:
     return rt.jti
 
 
+def can_sign_in(user: User | None) -> bool:
+    """Disabled accounts, and every account of a deactivated hospital, are locked out."""
+    return user is not None and user.active and (user.hospital is None or user.hospital.active)
+
+
 def rotate_refresh(db: Session, token: str) -> tuple[User, str]:
     """Single-use refresh tokens. Reusing a rotated token revokes the whole family (theft detection)."""
     rt = db.get(RefreshToken, token)
@@ -131,6 +138,8 @@ def rotate_refresh(db: Session, token: str) -> tuple[User, str]:
     rt.revoked = True
     user = db.get(User, rt.user_id)
     db.commit()
+    if not can_sign_in(user):
+        raise HTTPException(401, "account disabled")
     return user, issue_refresh(db, user, rt.family)
 
 
@@ -152,8 +161,8 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
         raise HTTPException(401, "not authenticated", headers={"WWW-Authenticate": "Bearer"})
     data = decode(creds.credentials, "access")
     user = db.get(User, int(data["sub"]))
-    if user is None or not user.active:
-        raise HTTPException(401, "user inactive")
+    if not can_sign_in(user):
+        raise HTTPException(401, "account disabled")
     if user.role.value in get_settings().require_mfa_roles and not data.get("mfa"):
         raise HTTPException(403, "MFA required for this role")
     request.state.user = user

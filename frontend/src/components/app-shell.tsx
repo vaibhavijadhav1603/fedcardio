@@ -2,7 +2,7 @@
 
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import {
-  Activity, BrainCircuit, Building2, ChevronDown, FlaskConical, Globe, LogOut, Menu, Monitor, Moon, Network,
+  Activity, BrainCircuit, Building2, ChevronDown, FlaskConical, Globe, KeyRound, LogOut, Menu, Monitor, Moon, Network,
   ScrollText, Share2, Sun, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -10,8 +10,10 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/brand";
+import { ChangePasswordDialog } from "@/components/password-dialog";
 import { Badge, Button } from "@/components/ui";
 import { ROLE_LABEL, useAuth } from "@/lib/auth";
+import { useApi } from "@/lib/hooks";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -152,6 +154,9 @@ function Brand() {
 }
 
 function SidebarFooter() {
+  const { can } = useAuth();
+  const nodes = useApi<{ status: string }[]>(can("fl:view") ? "/fl/nodes" : null);
+  const online = nodes.data?.filter((n) => n.status === "online").length;
   return (
     <div className="m-3 rounded-xl border border-border bg-surface-2 p-3">
       <div className="flex items-center gap-2 text-xs font-semibold">
@@ -161,7 +166,9 @@ function SidebarFooter() {
         </span>
         Federation online
       </div>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-muted">4 hospital nodes · mTLS · CKKS-ready</p>
+      <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+        {online !== undefined && `${online} hospital node${online === 1 ? "" : "s"} · `}mTLS · CKKS-ready
+      </p>
     </div>
   );
 }
@@ -220,6 +227,7 @@ function LanguageMenu() {
 function UserMenu() {
   const { user, logout } = useAuth();
   const { m } = useI18n();
+  const [pw, setPw] = useState(false);
   if (!user) return null;
   const initials = user.full_name
     .replace(/^Dr\.\s*/, "")
@@ -249,10 +257,14 @@ function UserMenu() {
           </div>
         </div>
         <Dropdown.Separator className="my-1 h-px bg-border" />
+        <Item onSelect={() => setPw(true)}>
+          <KeyRound className="size-4" /> Change password
+        </Item>
         <Item onSelect={logout}>
           <LogOut className="size-4" /> {m.common.signOut}
         </Item>
       </Menu_>
+      <ChangePasswordDialog open={pw || user.must_change_password} onOpenChange={setPw} forced={user.must_change_password} />
     </Dropdown.Root>
   );
 }

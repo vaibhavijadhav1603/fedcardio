@@ -12,6 +12,7 @@ export interface Me {
   hospital_name: string | null;
   hospital_code: string | null;
   mfa_enabled: boolean;
+  must_change_password: boolean;
   permissions: string[];
 }
 

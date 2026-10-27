@@ -7,6 +7,7 @@ import pytest
 _tmp = Path(tempfile.mkdtemp(prefix="fedcardio-test-"))
 os.environ["FEDCARDIO_DATABASE_URL"] = f"sqlite:///{_tmp / 'test.db'}"
 os.environ["FEDCARDIO_KMS_DIR"] = str(_tmp / "kms")
+os.environ["FEDCARDIO_TRAINED_MODELS_DIR"] = str(_tmp / "trained")
 os.environ["FEDCARDIO_COOKIE_PATH"] = "/auth"
 os.environ["FEDCARDIO_RATE_LIMIT_PER_MINUTE"] = "100000"
 os.environ["FEDCARDIO_LOGIN_RATE_LIMIT_PER_MINUTE"] = "100000"

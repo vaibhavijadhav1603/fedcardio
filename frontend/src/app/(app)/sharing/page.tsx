@@ -7,7 +7,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, ErrorState, Field, Input, LoadingRows, NativeSelect,
+  Badge, Button, Card, CardBody, Dialog, EmptyState, ErrorState, Field, Input, LoadingRows, NativeSelect,
   PageHeader, Stat, Table, Tabs, TabsContent, TabsList, TabsTrigger, Td, Textarea, Th,
 } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -304,7 +304,7 @@ function DecideDialog({ share, onClose, onDone }: { share: Share | null; onClose
           {share.consent_on_file ? (
             <div className="flex gap-2 rounded-xl bg-success-soft p-3 text-success"><ShieldCheck className="size-4 shrink-0" /> An active patient consent covers this purpose and recipient.</div>
           ) : (
-            <div className="flex gap-2 rounded-xl bg-warning-soft p-3 text-warning"><KeyRound className="size-4 shrink-0" /> No matching consent. Record the patient's consent (Risk assessment → patient → Consent) before approving.</div>
+            <div className="flex gap-2 rounded-xl bg-warning-soft p-3 text-warning"><KeyRound className="size-4 shrink-0" /> No matching consent. Record the patient&apos;s consent (Risk assessment → patient → Consent) before approving.</div>
           )}
           <Field label="Access valid for (days)" htmlFor="days" hint="Access also ends automatically if the patient's consent expires or is revoked.">
             <Input id="days" type="number" min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} />

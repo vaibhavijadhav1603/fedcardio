@@ -314,7 +314,7 @@ export const TabsContent = ({ className, ...p }: React.ComponentProps<typeof Tab
 );
 
 /* ---------------------------------------------------------------- Dialog */
-export function Dialog({ open, onOpenChange, title, description, children, footer, wide }: {
+export function Dialog({ open, onOpenChange, title, description, children, footer, wide, dismissible = true }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: React.ReactNode;
@@ -322,6 +322,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   children?: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
+  dismissible?: boolean; // false: no close button (e.g. a required step)
 }) {
   return (
     <DialogP.Root open={open} onOpenChange={onOpenChange}>
@@ -343,11 +344,13 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
                 <DialogP.Description className="sr-only">{String(title)}</DialogP.Description>
               )}
             </div>
-            <DialogP.Close asChild>
-              <Button variant="ghost" size="icon" aria-label="Close dialog">
-                <X />
-              </Button>
-            </DialogP.Close>
+            {dismissible && (
+              <DialogP.Close asChild>
+                <Button variant="ghost" size="icon" aria-label="Close dialog">
+                  <X />
+                </Button>
+              </DialogP.Close>
+            )}
           </div>
           <div className="mt-5">{children}</div>
           {footer && <div className="mt-6 flex flex-wrap justify-end gap-2">{footer}</div>}

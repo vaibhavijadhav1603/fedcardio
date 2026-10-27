@@ -4,7 +4,7 @@ import { BrainCircuit, CheckCircle2, FileText, History, Rocket, ShieldCheck, Und
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, ErrorState, LoadingRows, PageHeader,
+  Badge, Button, Card, Dialog, EmptyState, ErrorState, LoadingRows, PageHeader,
 } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

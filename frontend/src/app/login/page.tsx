@@ -5,18 +5,15 @@ import { ArrowRight, Eye, EyeOff, KeyRound, Lock, ShieldCheck, Sparkles } from "
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { FederationArt, Logo } from "@/components/brand";
-import { Badge, Button, Field, Input } from "@/components/ui";
-import { ApiError } from "@/lib/api";
-import { homeFor, useAuth } from "@/lib/auth";
+import { Button, Field, Input } from "@/components/ui";
+import { api, ApiError } from "@/lib/api";
+import { homeFor, ROLE_LABEL, useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 
-const DEMO = [
-  { role: "Clinician", email: "dr.cleveland@fedcardio.dev" },
-  { role: "Hospital admin", email: "admin.hungarian@fedcardio.dev" },
-  { role: "Data scientist", email: "ds@fedcardio.dev" },
-  { role: "Auditor", email: "auditor@fedcardio.dev" },
-  { role: "Platform admin", email: "admin@fedcardio.dev" },
-];
+// Dev only: typing the demo password with the email left empty reveals the demo accounts that still exist.
+// The server checks the password, so the list is never sent to anyone who does not know it (and never in production).
+interface DemoAccount { email: string; role: string; hospital: string | null }
+const UNREACHABLE = "Can't reach the FedCardio server. Check that the backend is running, then try again.";
 
 function LoginInner() {
   const { m } = useI18n();
@@ -31,6 +28,26 @@ function LoginInner() {
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const codeRef = useRef<HTMLInputElement>(null);
+  const [serverUp, setServerUp] = useState(true);
+  useEffect(() => {
+    // the API sits behind the Next proxy, which answers 5xx when the backend is not running
+    let alive = true;
+    const check = () => fetch("/api/health").then((r) => r.ok, () => false).then((ok) => alive && setServerUp(ok));
+    check();
+    const t = setInterval(check, 5000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+  const [demo, setDemo] = useState<DemoAccount[]>([]);
+  useEffect(() => {
+    if (demo.length || email || password.length < 8) return; // once unlocked, the list stays while you pick
+    const t = setTimeout(() => {
+      api<DemoAccount[]>("/auth/demo-accounts", { method: "POST", json: { password } }).then(setDemo, () => undefined);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [email, password, demo.length]);
 
   useEffect(() => {
     if (!loading && user) router.replace(homeFor(user.role));
@@ -55,7 +72,9 @@ function LoginInner() {
         }
       }
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 429 ? "Too many attempts — wait a minute." : (err as Error).message);
+      const down = !(err instanceof ApiError) || err.status >= 500;
+      if (down) setServerUp(false);
+      setError(down ? UNREACHABLE : err.status === 429 ? "Too many attempts — wait a minute." : err.message);
       setBusy(false);
     }
   }
@@ -114,6 +133,12 @@ function LoginInner() {
             <Logo className="size-9" />
             <span className="text-lg font-semibold">FedCardio</span>
           </div>
+          {!serverUp && (
+            <div role="alert" className="mb-5 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+              <div className="font-semibold">Server unreachable</div>
+              <div className="mt-0.5 text-[13px]">The FedCardio backend is not running, so nobody can sign in. Start it with scripts\start_local.ps1; this page reconnects on its own.</div>
+            </div>
+          )}
           {params.get("expired") && (
             <div role="status" className="mb-5 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">
               {m.login.expired}
@@ -198,28 +223,27 @@ function LoginInner() {
             )}
           </form>
 
-          {!challenge && (
+          {!challenge && demo.length > 0 && (
             <div className="mt-10 rounded-xl border border-border bg-surface p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-semibold">{m.login.demo}</span>
-                <Badge tone="warning">synthetic data</Badge>
               </div>
-              <p className="mt-1 text-xs text-muted">
-                Password for all: <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-fg">FedCardio!2026</code>
-              </p>
-              <div className="mt-3 grid gap-1.5">
-                {DEMO.map((d) => (
+              <p className="mt-1 text-xs text-muted">Pick an account; they all use the password you entered.</p>
+              <div className="scrollbar-thin mt-3 grid max-h-72 gap-1.5 overflow-y-auto">
+                {demo.map((d) => (
                   <button
                     key={d.email}
                     type="button"
-                    onClick={() => {
-                      setEmail(d.email);
-                      setPassword("FedCardio!2026");
-                    }}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface-2"
+                    onClick={() => setEmail(d.email)}
+                    className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-surface-2"
                   >
-                    <span className="font-medium">{d.role}</span>
-                    <span className="truncate pl-3 text-xs text-muted">{d.email}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        <span className="font-medium">{ROLE_LABEL[d.role] ?? d.role}</span>
+                        {d.hospital && <span className="text-muted"> · {d.hospital}</span>}
+                      </span>
+                      <span className="block truncate text-xs text-muted">{d.email}</span>
+                    </span>
                   </button>
                 ))}
               </div>

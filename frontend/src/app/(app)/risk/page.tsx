@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Activity, AlertTriangle, CalendarClock, Copy, FileHeart, IdCard, Info, Printer, Search, ShieldCheck, ThumbsDown, ThumbsUp, UserRound,
-  Wand2,
+  Activity, AlertTriangle, CalendarClock, Copy, FileHeart, IdCard, Info, Printer, Search, ShieldCheck, ThumbsDown, ThumbsUp, UserPlus,
+  UserRound, Wand2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -65,6 +65,7 @@ export default function RiskPage() {
   const [pred, setPred] = useState<Prediction | null>(null);
   const [busy, setBusy] = useState(false);
   const [manual, setManual] = useState<Record<string, string>>({ age: "58", sex: "1", cp: "4", trestbps: "140", chol: "260", fbs: "0", restecg: "0", thalach: "130", exang: "1", oldpeak: "1.8" });
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => setPred(null), [selected, mode]);
 
@@ -89,7 +90,10 @@ export default function RiskPage() {
         eyebrow={<Badge tone="primary"><Activity /> Clinical decision support · research</Badge>}
         title={m.risk.title}
         description={m.risk.subtitle}
+        actions={<Button onClick={() => setAdding(true)}><UserPlus /> Add patient</Button>}
       />
+      <AddPatientDialog open={adding} onOpenChange={setAdding} fields={schema.data?.fields ?? []}
+        onDone={(id) => { setMode("patient"); setQ(""); list.reload(); setSelected(id); }} />
       <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
         {/* patient list */}
         <Card className="flex max-h-[calc(100dvh-220px)] min-h-[420px] flex-col overflow-hidden">
@@ -123,7 +127,9 @@ export default function RiskPage() {
               ) : list.error ? (
                 <ErrorState error={list.error} onRetry={() => list.reload()} />
               ) : !list.data?.length ? (
-                <EmptyState icon={<Search />} title="No matching patients" description="Try a different name or pseudonym." />
+                debounced ? <EmptyState icon={<Search />} title="No matching patients" description="Try a different name or pseudonym." />
+                  : <EmptyState icon={<UserPlus />} title="No patients yet" description="Register your hospital's patients to assess their risk and share their records."
+                      action={<Button size="sm" onClick={() => setAdding(true)}><UserPlus /> Add patient</Button>} />
               ) : (
                 list.data.map((p) => (
                   <button
@@ -215,6 +221,7 @@ function PatientCard({ patient, loading, error, onRetry, onAssess, busy }: {
     ["Exercise angina", f.exang == null ? "—" : f.exang ? "Yes" : "No"],
     ["Fasting sugar >120", f.fbs == null ? "—" : f.fbs ? "Yes" : "No"],
     ["Resting ECG", ({ 0: "Normal", 1: "ST-T abnormality", 2: "LVH" } as Record<number, string>)[f.restecg] ?? "—"],
+    ["Diagnosis (CAD)", f.diagnosis == null ? "Not established" : f.diagnosis ? "Confirmed" : "Ruled out"],
   ];
   return (
     <Card>
@@ -256,6 +263,88 @@ function PatientCard({ patient, loading, error, onRetry, onAssess, busy }: {
         </Tabs>
       </CardBody>
     </Card>
+  );
+}
+
+const BLANK_PATIENT = { local_id: "", display_name: "", sex: "female", birth_year: "", diagnosis: "" };
+
+function AddPatientDialog({ open, onOpenChange, fields, onDone }: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  fields: SchemaField[];
+  onDone: (id: number) => void;
+}) {
+  const [f, setF] = useState(BLANK_PATIENT);
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const measures = fields.filter((x) => x.key !== "age" && x.key !== "sex"); // age and sex come from the demographics
+  function close() {
+    setF(BLANK_PATIENT);
+    setVals({});
+    setErr(null);
+    onOpenChange(false);
+  }
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const features = Object.fromEntries(Object.entries(vals).filter(([, v]) => v !== "").map(([k, v]) => [k, Number(v)]));
+      const p = await api<PatientRow>("/patients", { method: "POST", json: {
+        ...f, birth_year: Number(f.birth_year), features, diagnosis: f.diagnosis === "" ? null : Number(f.diagnosis) } });
+      toast.success("Patient registered", { description: `${p.display_name} · ${p.pseudo_id}` });
+      close();
+      onDone(p.id);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && close()} wide title="Add patient"
+      description="The record is stored encrypted with your hospital's key. Leave a measurement empty if it was not taken."
+      footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button onClick={submit} loading={busy}><UserPlus /> Register patient</Button></>}>
+      <div className="grid gap-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Full name" htmlFor="p-name"><Input id="p-name" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></Field>
+          <Field label="Hospital record number" htmlFor="p-local" hint="Your own MRN; it is turned into a pseudonymous ID."><Input id="p-local" value={f.local_id} onChange={(e) => setF({ ...f, local_id: e.target.value })} /></Field>
+          <Field label="Sex" htmlFor="p-sex">
+            <NativeSelect id="p-sex" value={f.sex} onChange={(e) => setF({ ...f, sex: e.target.value })}>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </NativeSelect>
+          </Field>
+          <Field label="Birth year" htmlFor="p-by"><Input id="p-by" type="number" inputMode="numeric" min={1900} max={new Date().getFullYear()} value={f.birth_year} onChange={(e) => setF({ ...f, birth_year: e.target.value })} /></Field>
+        </div>
+        <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+          {measures.map((x) => (
+            <Field key={x.key} label={x.unit ? `${x.label} (${x.unit})` : x.label} htmlFor={`p-${x.key}`}>
+              {x.kind === "select" ? (
+                <NativeSelect id={`p-${x.key}`} value={vals[x.key] ?? ""} onChange={(e) => setVals({ ...vals, [x.key]: e.target.value })}>
+                  <option value="">Not recorded</option>
+                  {x.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </NativeSelect>
+              ) : (
+                <Input id={`p-${x.key}`} type="number" inputMode="decimal" min={x.min} max={x.max} step="any" value={vals[x.key] ?? ""}
+                  onChange={(e) => setVals({ ...vals, [x.key]: e.target.value })} />
+              )}
+            </Field>
+          ))}
+        </div>
+        <div className="border-t border-border pt-4">
+          <Field label="Confirmed diagnosis (coronary artery disease)" htmlFor="p-dx"
+            hint="Optional. With the patient's research consent, a patient with a diagnosis also becomes a training row for federated learning.">
+            <NativeSelect id="p-dx" value={f.diagnosis} onChange={(e) => setF({ ...f, diagnosis: e.target.value })}>
+              <option value="">Not established yet</option>
+              <option value="1">Confirmed (e.g. angiography)</option>
+              <option value="0">Ruled out</option>
+            </NativeSelect>
+          </Field>
+        </div>
+        {err && <div role="alert" className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-[13px] text-danger">{err}</div>}
+      </div>
+    </Dialog>
   );
 }
 

@@ -18,3 +18,6 @@ secrets/
 results/_*.log
 backend/fedcardio.db
 backend/.dev-kms/
+models/trained/
+.next-e2e/
+.next-new/

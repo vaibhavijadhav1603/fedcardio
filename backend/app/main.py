@@ -10,8 +10,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from .config import get_settings
-from .db import Base, engine
-from .routers import admin, auth, fl, ml, patients
+from .db import Base, add_missing_sqlite_columns, engine
+from .routers import admin, auth, datasets, fl, ml, patients
 
 settings = get_settings()
 app = FastAPI(title="FedCardio API", version="0.1.0",
@@ -50,7 +50,7 @@ async def guard(request: Request, call_next):
     return resp
 
 
-for r in (auth.router, admin.router, patients.router, ml.router, fl.router):
+for r in (auth.router, admin.router, datasets.router, patients.router, ml.router, fl.router):
     app.include_router(r)
 
 
@@ -58,6 +58,7 @@ for r in (auth.router, admin.router, patients.router, ml.router, fl.router):
 def startup():
     if settings.database_url.startswith("sqlite"):
         Base.metadata.create_all(engine)  # postgres deployments use Alembic migrations
+        add_missing_sqlite_columns()
 
 
 @app.get("/health", tags=["ops"])

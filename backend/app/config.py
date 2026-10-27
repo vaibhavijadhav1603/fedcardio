@@ -21,10 +21,12 @@ class Settings(BaseSettings):
     kms_dir: Path = ROOT / "backend" / ".dev-kms"   # INSECURE file-based KMS stub (dev only)
     pseudonym_key: str = "dev-pseudonym-key-change-me"
     registry_dir: Path = ROOT / "models" / "registry"
+    trained_models_dir: Path = ROOT / "models" / "trained"  # cards of models trained from the console (not in git)
     results_dir: Path = ROOT / "results"
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     rate_limit_per_minute: int = 120
     login_rate_limit_per_minute: int = 10
+    demo_password: str = "FedCardio!2026"  # dev only: seeded demo accounts use it, and it unlocks the login page list
     require_mfa_roles: list[str] = []  # e.g. ["platform_admin"] in production
     cookie_path: str = "/api/auth"  # path the browser sees through the frontend proxy
 

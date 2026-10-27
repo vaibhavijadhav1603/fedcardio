@@ -2,9 +2,10 @@
 
 import { motion } from "framer-motion";
 import {
-  Activity, Ban, CircleCheck, CircleDashed, Cpu, Gauge, Loader2, Lock, Network, Play, Radio, Server, ShieldCheck,
-  Sparkles, TriangleAlert, Users,
+  Activity, Archive, Ban, BrainCircuit, CircleCheck, CircleDashed, Cpu, Gauge, Loader2, Lock, Network, Play, Radio, Server,
+  ShieldCheck, Sparkles, TriangleAlert, Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -40,6 +41,8 @@ interface Job {
   error: string;
   created_at: string;
   finished_at: string | null;
+  registrable: boolean;
+  registered_model: string | null;
 }
 
 const ALGOS = [
@@ -79,7 +82,9 @@ export default function FederatedPage() {
       <Card className="mb-6">
         <CardHeader icon={<Radio />} title="Hospital nodes" description="Each node trains locally on its own data partition." />
         <CardBody>
-          {nodes.loading ? <LoadingRows rows={1} /> : nodes.error ? <ErrorState error={nodes.error} onRetry={() => nodes.reload()} /> : (
+          {nodes.loading ? <LoadingRows rows={1} /> : nodes.error ? <ErrorState error={nodes.error} onRetry={() => nodes.reload()} /> : !nodes.data!.length ? (
+            <EmptyState icon={<Server />} title="No hospital nodes yet" description="A hospital joins training when its admin uploads a dataset under Administration → Training data. At least two are needed." />
+          ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {nodes.data!.map((n, i) => {
                 const active = job?.status === "running";
@@ -89,7 +94,7 @@ export default function FederatedPage() {
                     {active && <motion.div className="absolute inset-x-0 top-0 h-0.5 bg-primary" animate={{ x: ["-100%", "100%"] }} transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.2 }} />}
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2 text-[13px] font-semibold"><Cpu className="size-4 text-primary" /> {n.name}</span>
-                      <Badge tone={n.status === "online" ? "success" : "danger"}><span className="size-1.5 rounded-full bg-current" /> {n.status}</Badge>
+                      <Badge tone={n.status === "online" ? "success" : n.status === "no data" ? "warning" : "danger"}><span className="size-1.5 rounded-full bg-current" /> {n.status}</Badge>
                     </div>
                     <div className="mt-2 text-[12.5px] text-muted">{n.hospital}</div>
                     <div className="mt-3 flex items-end justify-between">
@@ -223,6 +228,7 @@ function JobView({ job, onCancelled, canRun }: { job: Job; onCancelled: () => vo
   const target = Number(job.config.dp_epsilon);
   const usesDp = String(job.config.privacy).includes("dpsgd");
   const last = job.history.at(-1);
+  const [registering, setRegistering] = useState(false);
   async function cancel() {
     try {
       await api(`/fl/jobs/${job.id}/cancel`, { method: "POST" });
@@ -232,13 +238,30 @@ function JobView({ job, onCancelled, canRun }: { job: Job; onCancelled: () => vo
       toast.error((e as Error).message);
     }
   }
+  async function register() {
+    setRegistering(true);
+    try {
+      await api(`/fl/jobs/${job.id}/register`, { method: "POST" });
+      toast.success("Model registered for review", { description: "It is in the Model registry as staging. The platform admin decides whether to promote it." });
+      onCancelled(); // reload the job list
+    } catch (e) {
+      toast.error("Could not register", { description: (e as Error).message });
+    } finally {
+      setRegistering(false);
+    }
+  }
+  const registerAction = job.registered_model ? (
+    <Link href="/models"><Badge tone="accent"><BrainCircuit /> In registry · staging</Badge></Link>
+  ) : canRun && job.registrable ? (
+    <Button size="sm" onClick={register} loading={registering}><Archive /> Register model</Button>
+  ) : null;
   return (
     <Card>
       <CardHeader
         icon={<Gauge />}
         title={<span className="flex items-center gap-2">Job #{job.id} <Badge tone={job.status === "completed" ? "success" : job.status === "failed" ? "danger" : job.status === "running" ? "primary" : "neutral"}><StatusIcon s={job.status} /> {job.status}</Badge></span>}
         description={job.name}
-        action={canRun && (job.status === "running" || job.status === "queued") && <Button size="sm" variant="secondary" onClick={cancel}><Ban /> Cancel</Button>}
+        action={canRun && (job.status === "running" || job.status === "queued") ? <Button size="sm" variant="secondary" onClick={cancel}><Ban /> Cancel</Button> : registerAction}
       />
       <CardBody className="space-y-5">
         <div>
@@ -276,7 +299,7 @@ function JobView({ job, onCancelled, canRun }: { job: Job; onCancelled: () => vo
         {job.status === "completed" && (
           <div className="grid gap-3 sm:grid-cols-4">
             {([["sensitivity", "Sensitivity"], ["specificity", "Specificity"], ["auprc", "AUPRC"], ["brier", "Brier score"]] as const).map(([k, l]) => <MiniStat key={k} label={l} value={num(job.metrics[k])} />)}
-            {Object.entries(job.metrics).filter(([k]) => k.startsWith("auroc_")).map(([k, v]) => <MiniStat key={k} label={`AUROC · ${k.slice(6).replace("_", " ")}`} value={num(v)} />)}
+            {Object.entries(job.metrics).filter(([k]) => k.startsWith("auroc_")).map(([k, v]) => <MiniStat key={k} label={`AUROC · ${k.slice(6).replace(/_/g, " ")}`} value={num(v)} />)}
             {job.metrics.he_encrypt_s != null && <MiniStat label="HE encrypt time" value={`${job.metrics.he_encrypt_s.toFixed(2)} s`} />}
           </div>
         )}

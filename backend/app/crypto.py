@@ -24,6 +24,7 @@ from .config import get_settings
 class KMS(Protocol):
     def wrap(self, tenant: str, dek: bytes) -> bytes: ...
     def unwrap(self, tenant: str, wrapped: bytes) -> bytes: ...
+    def destroy(self, tenant: str) -> None: ...
 
 
 class FileKMS:
@@ -45,6 +46,10 @@ class FileKMS:
 
     def unwrap(self, tenant: str, wrapped: bytes) -> bytes:
         return AESGCM(self._kek(tenant)).decrypt(wrapped[:12], wrapped[12:], tenant.encode())
+
+    def destroy(self, tenant: str) -> None:
+        """Crypto-shred: without the KEK, every DEK wrapped for this tenant is unrecoverable."""
+        (self.dir / f"{tenant}.kek").unlink(missing_ok=True)
 
 
 _kms: KMS | None = None

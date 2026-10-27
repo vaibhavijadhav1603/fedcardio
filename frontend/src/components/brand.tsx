@@ -28,14 +28,14 @@ export function Logo({ className = "size-8" }: { className?: string }) {
 export function FederationArt() {
   const reduce = useReducedMotion();
   const nodes = [
-    { x: 70, y: 70, label: "Cleveland" },
-    { x: 330, y: 70, label: "Budapest" },
-    { x: 70, y: 290, label: "Zürich" },
-    { x: 330, y: 290, label: "Long Beach" },
+    { x: 70, y: 70, label: "Hospital A" },
+    { x: 330, y: 70, label: "Hospital B" },
+    { x: 70, y: 290, label: "Hospital C" },
+    { x: 330, y: 290, label: "Hospital D" },
   ];
   const c = { x: 200, y: 180 };
   return (
-    <svg viewBox="0 0 400 360" className="w-full max-w-md" role="img" aria-label="Four hospitals train a shared model without sharing patient data">
+    <svg viewBox="0 0 400 360" className="w-full max-w-md" role="img" aria-label="Hospitals train a shared model without sharing patient data">
       {nodes.map((n, i) => (
         <g key={n.label}>
           <line x1={n.x} y1={n.y} x2={c.x} y2={c.y} stroke="white" strokeOpacity="0.25" strokeDasharray="4 6" />

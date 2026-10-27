@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fhir.resources.R4B.bundle import Bundle
+from fhir.resources.R4B.condition import Condition
 from fhir.resources.R4B.consent import Consent as FhirConsent
 from fhir.resources.R4B.observation import Observation
 from fhir.resources.R4B.patient import Patient as FhirPatient
@@ -26,8 +27,13 @@ OBS_CODES = {
     "restecg": (LOCAL, "rest-ecg", "Resting ECG (0 normal, 1 ST-T abnormality, 2 LVH)", "{code}"),
 }
 
+SNOMED = "http://snomed.info/sct"
+CAD = (SNOMED, "53741008", "Coronary arteriosclerosis")  # the UCI target: angiographic narrowing > 50%
 
-def patient_bundle(pseudo_id: str, sex: str, birth_year: int, features: dict, hospital_code: str) -> dict:
+
+def patient_bundle(pseudo_id: str, sex: str, birth_year: int, features: dict, hospital_code: str,
+                   diagnosis: int | None = None) -> dict:
+    """diagnosis: 1 = coronary artery disease confirmed, 0 = ruled out, None = not established."""
     pat = FhirPatient(
         id=pseudo_id,
         identifier=[{"system": f"urn:fedcardio:{hospital_code}:pseudonym", "value": pseudo_id}],
@@ -48,6 +54,16 @@ def patient_bundle(pseudo_id: str, sex: str, birth_year: int, features: dict, ho
             valueQuantity={"value": float(val), "unit": unit, "system": "http://unitsofmeasure.org", "code": unit},
         )
         entries.append({"fullUrl": f"urn:uuid:obs-{pseudo_id}-{key}", "resource": obs})
+    if diagnosis is not None:
+        verification = "confirmed" if diagnosis else "refuted"
+        cond = Condition(
+            id=f"{pseudo_id}-cad",
+            verificationStatus={"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                                            "code": verification}]},
+            code={"coding": [{"system": CAD[0], "code": CAD[1], "display": CAD[2]}], "text": CAD[2]},
+            subject={"reference": f"Patient/{pseudo_id}"}, recordedDate=now,
+        )
+        entries.append({"fullUrl": f"urn:uuid:cond-{pseudo_id}-cad", "resource": cond})
     return Bundle(type="collection", entry=entries).model_dump(mode="json")
 
 
@@ -63,6 +79,8 @@ def features_from_bundle(bundle: dict) -> dict:
         elif r["resourceType"] == "Patient":
             out["sex"] = 1.0 if r.get("gender") == "male" else 0.0
             out["birth_year"] = int(r["birthDate"][:4])
+        elif r["resourceType"] == "Condition" and r["code"]["coding"][0]["code"] == CAD[1]:
+            out["diagnosis"] = 1 if r["verificationStatus"]["coding"][0]["code"] == "confirmed" else 0
     return out
 
 

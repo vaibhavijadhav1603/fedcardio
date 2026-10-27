@@ -1,6 +1,6 @@
 # PROGRESS
 
-Last updated 2026-10-22. Runs on **localhost** (deployment deferred at the user's request). Writing our own paper is deferred too.
+Last updated 2026-10-27. Runs on **localhost** (deployment deferred at the user's request). Writing our own paper is deferred too.
 
 ## Done
 - **Phase 0**: paper read; `docs/SPEC.md` with 11 discrepancies (key one: the paper's code picks sensitivity/specificity thresholds
@@ -21,13 +21,26 @@ Last updated 2026-10-22. Runs on **localhost** (deployment deferred at the user'
   consent, FHIR view, feedback); record sharing; FL console with live curves and privacy-budget meter; experiments explorer;
   model registry with model cards; administration; audit viewer. Light/dark, responsive, strings externalised (English; Hindi/Kannada slots).
 
+- **Own hospitals** (2026-10-27): platform admin can deactivate / re-activate / permanently delete hospitals (delete
+  crypto-shreds the hospital's KEK); hospital admins upload a validated CSV that is stored encrypted with their KEK; FL jobs train
+  on every active hospital with data instead of the fixed UCI files. `seed --no-demo` starts with no hospitals. Refresh tokens
+  now also stop working for disabled users.
+- **Roles and accounts** (2026-10-27): one platform admin, who creates hospitals with their admins; hospital admins add clinicians;
+  clinicians register patients. Temporary passwords must be changed at first sign-in; self-service change and scoped admin reset.
+  Login page demo list is hidden behind the demo password (dev only). `seed --restore-demo` re-creates deleted demo hospitals.
+- **Patients and models feed the platform** (2026-10-27): patients with a diagnosis and research consent are training rows;
+  finished jobs can be registered as staging models (model card with calibration, threshold, OOD ranges) for the platform admin
+  to promote.
+
 ## Tests (real outputs)
 - Engine: `pytest tests`: 22 (Phase 1) + 6 (zoo) + 16 (FL/privacy) tests, all passing. Includes FedAvg == centralised GD in the IID
   full-participation limit, CKKS error < 1e-4, SecAgg masks cancel, DP accountant monotone, SVT sparsity/clipping.
-- Backend: `pytest backend/tests`: **85 passed** (role × endpoint matrix, tenant isolation, consent/revocation cascade,
+- Backend: `pytest backend/tests`: **96 passed** (role × endpoint matrix, tenant isolation, consent/revocation cascade,
   audit tamper detection, refresh-token reuse, MFA, prediction, an end-to-end HE training job).
-- Frontend: Playwright, **7/7 flows passing** with axe WCAG 2.2 A/AA checks (no serious or critical violations). Axe found and I fixed
-  low-contrast text, misused tabs and unlabeled charts.
+- Frontend: Playwright, 8 flows with axe WCAG 2.2 A/AA checks (no serious or critical violations). Axe found and I fixed
+  low-contrast text, misused tabs and unlabeled charts. On 2026-10-27 every flow passed on the final code, but the last full run
+  was 7/8: the long hospital flow timed out at sign-in on a memory-starved laptop (42 s page compile); it passed when run alone.
+  `tsc` and `eslint` are clean.
 
 ## Key results (script-generated; see `results/`, the UI's Experiments page)
 UCI, 3×5 per-site CV, AUROC (honest validation-chosen threshold):

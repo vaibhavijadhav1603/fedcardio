@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, datasets
 from ..crypto import decrypt_payload, encrypt_payload, pseudonymize, rewrap
 from ..db import get_db
 from ..fhir import consent_resource, features_from_bundle, patient_bundle
@@ -46,9 +46,9 @@ def patient_summary(p: Patient) -> dict:
 
 
 def create_patient_record(db: Session, hospital: Hospital, local_id: str, name: str, sex: str, birth_year: int,
-                          features: dict) -> Patient:
+                          features: dict, diagnosis: int | None = None) -> Patient:
     pid = pseudonymize(hospital.code, local_id)
-    bundle = patient_bundle(pid, sex, birth_year, features, hospital.code)
+    bundle = patient_bundle(pid, sex, birth_year, features, hospital.code, diagnosis)
     ct, nonce, wdek = encrypt_payload(hospital.code, json.dumps(bundle).encode(), pid.encode())
     p = Patient(pseudo_id=pid, hospital_id=hospital.id, display_name=name, sex=sex, birth_year=birth_year,
                 ciphertext=ct, nonce=nonce, wrapped_dek=wdek)
@@ -73,20 +73,21 @@ def directory(pseudo_id: str = Query(min_length=6, max_length=40), user: User = 
               db: Session = Depends(get_db)):
     """Cross-hospital lookup by exact pseudonym; reveals only where the record lives, never its content."""
     p = db.query(Patient).filter(Patient.pseudo_id == pseudo_id.strip().upper()).first()
-    if p is None or p.hospital_id == user.hospital_id:
+    if p is None or p.hospital_id == user.hospital_id or not p.hospital.active:
         raise HTTPException(404, "no external record with that pseudonym")
     audit.log(db, "patient.directory_lookup", user=user, resource=f"patient:{p.pseudo_id}")
     return {"pseudo_id": p.pseudo_id, "hospital_id": p.hospital_id, "hospital_name": p.hospital.name}
 
 
 @router.get("/patients/match")
-def match(name: str = Query(min_length=3, max_length=120), birth_year: int = Query(ge=1900, le=2026),
+def match(name: str = Query(min_length=3, max_length=120), birth_year: int = Query(ge=1900),
           sex: str = Query(pattern="^(male|female)$"), user: User = Depends(require(Perm.share_request)),
           db: Session = Depends(get_db)):
     """Master-patient-index style lookup: exact name + birth year + sex at another hospital. No browsing,
     no partial matches; ambiguous results are refused so the requester must ask for the pseudonym."""
-    hits = (db.query(Patient)
-            .filter(Patient.hospital_id != user.hospital_id, Patient.birth_year == birth_year, Patient.sex == sex,
+    _check_birth_year(birth_year)
+    hits = (db.query(Patient).join(Hospital, Patient.hospital_id == Hospital.id)
+            .filter(Patient.hospital_id != user.hospital_id, Hospital.active.is_(True), Patient.birth_year == birth_year, Patient.sex == sex,
                     func.lower(Patient.display_name) == " ".join(name.split()).lower())
             .limit(2).all())
     audit.log(db, "patient.match_lookup", user=user, resource=f"matches:{len(hits)}")
@@ -109,12 +110,18 @@ def get_patient(pid: int, user: User = Depends(require(Perm.patient_read)), db: 
     return {**patient_summary(p), "features": features_from_bundle(bundle), "fhir": bundle}
 
 
+def _check_birth_year(year: int):
+    if year > _now().year:
+        raise HTTPException(422, "birth year cannot be in the future")
+
+
 class PatientIn(BaseModel):
     local_id: str = Field(min_length=1, max_length=40)
     display_name: str = Field(min_length=2, max_length=120)
     sex: str = Field(pattern="^(male|female)$")
-    birth_year: int = Field(ge=1900, le=2026)
+    birth_year: int = Field(ge=1900)
     features: dict[str, float | None] = {}
+    diagnosis: int | None = Field(default=None, ge=0, le=1)  # confirmed CAD 1 / ruled out 0; used for training
 
 
 @router.post("/patients", status_code=201)
@@ -122,12 +129,14 @@ def create_patient(body: PatientIn, user: User = Depends(require(Perm.patient_wr
     allowed = {"trestbps", "chol", "thalach", "oldpeak", "fbs", "exang", "cp", "restecg"}
     if set(body.features) - allowed:
         raise HTTPException(422, f"unknown features: {sorted(set(body.features) - allowed)}")
+    _check_birth_year(body.birth_year)
     h = db.get(Hospital, user.hospital_id)
     if db.query(Patient).filter_by(pseudo_id=pseudonymize(h.code, body.local_id)).first():
         raise HTTPException(409, "patient exists")
     p = create_patient_record(db, h, body.local_id, body.display_name, body.sex, body.birth_year,
-                              {k: v for k, v in body.features.items() if v is not None})
+                              {k: v for k, v in body.features.items() if v is not None}, body.diagnosis)
     db.commit()
+    datasets.refresh_node(db, h)
     audit.log(db, "patient.create", user=user, resource=f"patient:{p.pseudo_id}")
     return patient_summary(p)
 
@@ -172,6 +181,8 @@ def record_consent(pid: int, body: ConsentIn, user: User = Depends(require(Perm.
     db.commit()
     audit.log(db, "consent.record", user=user, resource=f"patient:{p.pseudo_id}",
               detail={"consent_id": c.id, "purpose": c.purpose, "to": body.granted_to_hospital_id})
+    if c.purpose == "research":
+        datasets.refresh_node(db, p.hospital)  # research consent makes a diagnosed patient a training row
     return consent_out(c, db)
 
 
@@ -189,6 +200,8 @@ def revoke_consent(cid: int, user: User = Depends(require(Perm.consent_manage)),
             s.status, s.recipient_wrapped_dek = ShareStatus.revoked, None
         db.commit()
         audit.log(db, "consent.revoke", user=user, resource=f"patient:{p.pseudo_id}", detail={"consent_id": c.id})
+        if c.purpose == "research":
+            datasets.refresh_node(db, p.hospital)
     return consent_out(c, db)
 
 
@@ -235,7 +248,7 @@ def share_out(s: ShareRequest, db: Session) -> dict:
 @router.post("/shares", status_code=201)
 def request_share(body: ShareIn, user: User = Depends(require(Perm.share_request)), db: Session = Depends(get_db)):
     p = db.query(Patient).filter(Patient.pseudo_id == body.pseudo_id.strip().upper()).first()
-    if p is None or p.hospital_id == user.hospital_id:
+    if p is None or p.hospital_id == user.hospital_id or not p.hospital.active:
         raise HTTPException(404, "no external record with that pseudonym")
     s = ShareRequest(patient_id=p.id, owner_hospital_id=p.hospital_id, requesting_hospital_id=user.hospital_id,
                      requested_by=user.id, purpose=body.purpose, justification=body.justification)

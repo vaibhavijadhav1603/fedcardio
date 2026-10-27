@@ -4,7 +4,18 @@ from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -28,6 +39,8 @@ class Hospital(Base):
     code: Mapped[str] = mapped_column(String(40), unique=True)
     name: Mapped[str] = mapped_column(String(200))
     city: Mapped[str] = mapped_column(String(100), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    decommissioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -41,6 +54,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(300))
     totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)  # set for admin-issued temporary passwords
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     hospital: Mapped[Hospital | None] = relationship()
@@ -135,6 +149,23 @@ class FLNode(Base):
     n_records: Mapped[int] = mapped_column(Integer, default=0)
     cert_fingerprint: Mapped[str] = mapped_column(String(100), default="")
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    hospital: Mapped[Hospital] = relationship()
+
+
+class HospitalDataset(Base):
+    """A hospital's local training data (one per hospital), envelope-encrypted with that hospital's KEK."""
+    __tablename__ = "hospital_datasets"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hospital_id: Mapped[int] = mapped_column(ForeignKey("hospitals.id"), unique=True)
+    filename: Mapped[str] = mapped_column(String(200))
+    n_rows: Mapped[int] = mapped_column(Integer)
+    n_positive: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary)   # AES-GCM(normalised CSV)
+    nonce: Mapped[bytes] = mapped_column(LargeBinary)
+    wrapped_dek: Mapped[bytes] = mapped_column(LargeBinary)
+    uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     hospital: Mapped[Hospital] = relationship()
 
 

@@ -214,7 +214,7 @@ function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Request a patient record" description="Find the patient by their details or their ID. Requests and every search are audited."
-      footer={<><Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={submit} loading={busy} disabled={!found || why.trim().length < 10}>Send request</Button></>}>
+      footer={<><Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={submit} loading={busy} disabled={!found || why.trim().length < 5}>Send request</Button></>}>
       <div className="grid gap-4">
         <Tabs value={mode} onValueChange={(v) => { setMode(v as "details" | "id"); setFound(null); setLookupErr(null); }}>
           <TabsList>
@@ -265,7 +265,7 @@ function RequestDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
             <option value="research">Research</option>
           </NativeSelect>
         </Field>
-        <Field label="Clinical justification" htmlFor="why" error={why && why.trim().length < 10 ? "At least 10 characters" : null}>
+        <Field label="Clinical justification" htmlFor="why" error={why && why.trim().length < 5 ? "At least 5 characters" : null}>
           <Textarea id="why" value={why} onChange={(e) => setWhy(e.target.value)} placeholder="e.g. Patient transferred to our cardiology unit for angiography" />
         </Field>
       </div>

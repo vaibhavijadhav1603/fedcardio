@@ -21,7 +21,7 @@ export function ChangePasswordDialog({ open, onOpenChange, forced = false }: {
   const mismatch = f.again !== "" && f.next !== f.again;
 
   async function submit() {
-    if (f.next.length < 10) return setErr("The new password needs at least 10 characters.");
+    if (f.next.length < 5) return setErr("The new password needs at least 5 characters.");
     if (f.next !== f.again) return setErr("The two new passwords do not match.");
     setBusy(true);
     setErr(null);
@@ -49,7 +49,7 @@ export function ChangePasswordDialog({ open, onOpenChange, forced = false }: {
         <Field label={forced ? "Temporary password" : "Current password"} htmlFor="pw-cur">
           <Input id="pw-cur" type="password" autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
         </Field>
-        <Field label="New password" htmlFor="pw-new" hint="At least 10 characters.">
+        <Field label="New password" htmlFor="pw-new" hint="At least 5 characters.">
           <Input id="pw-new" type="password" autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} />
         </Field>
         <Field label="Repeat new password" htmlFor="pw-again" error={mismatch ? "Does not match." : err}>

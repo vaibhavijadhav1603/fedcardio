@@ -22,6 +22,7 @@ from ..security import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 COOKIE = "fc_refresh"
+LAUNCHER = "fc_launcher"  # dev only: lets the signed-in platform admin enter any role without a password
 
 
 class LoginIn(BaseModel):
@@ -68,6 +69,7 @@ def login(body: LoginIn, resp: Response, db: Session = Depends(get_db)):
     if user.mfa_enabled:
         return {"mfa_required": True, "challenge": create_mfa_challenge(user)}
     audit.log(db, "auth.login", user=user)
+    _open_launcher(resp, user)
     return _session(resp, db, user, mfa=False)
 
 
@@ -79,6 +81,7 @@ def mfa_verify(body: MfaIn, resp: Response, db: Session = Depends(get_db)):
         audit.log(db, "auth.mfa", user=user, outcome="failure")
         raise HTTPException(401, "invalid code")
     audit.log(db, "auth.login", user=user, detail={"mfa": True})
+    _open_launcher(resp, user)
     return _session(resp, db, user, mfa=True)
 
 
@@ -100,7 +103,7 @@ def refresh(request: Request, resp: Response, db: Session = Depends(get_db)):
 
 class PasswordIn(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
-    new_password: str = Field(min_length=10, max_length=200)
+    new_password: str = Field(min_length=5, max_length=200)
 
 
 @router.post("/password")
@@ -181,3 +184,75 @@ def demo_accounts(body: DemoIn, db: Session = Depends(get_db)):
             out += [u for u in users if u.hospital_id == h.id and u.role == role][:1]
     out += [u for u in users if u.role in (Role.data_scientist, Role.auditor)]
     return [{"email": u.email, "role": u.role.value, "hospital": u.hospital.name if u.hospital else None} for u in out]
+
+
+# ---------------------------------------------------------------- role launcher (dev only)
+# After the platform admin signs in once, a launcher cookie (httpOnly, same lifetime as a session) lets the
+# demo enter any account's view with one click: no passwords, no re-login when switching roles. Every entry
+# is audit-logged under the platform admin. It does not exist outside the dev environment.
+def _open_launcher(resp: Response, user: User):
+    import jwt
+    from datetime import datetime, timedelta, timezone
+    from ..models import Role
+    s = get_settings()
+    if s.env != "dev" or user.role != Role.platform_admin:
+        return
+    token = jwt.encode({"sub": str(user.id), "typ": "launcher", "iss": s.jwt_issuer,
+                        "exp": datetime.now(timezone.utc) + timedelta(hours=s.refresh_ttl_hours)},
+                       s.jwt_secret, algorithm="HS256")
+    resp.set_cookie(LAUNCHER, token, httponly=True, secure=False, samesite="strict",
+                    max_age=s.refresh_ttl_hours * 3600, path=s.cookie_path)
+
+
+def _launcher_admin(request: Request, db: Session) -> User:
+    from ..models import Role
+    token = request.cookies.get(LAUNCHER)
+    if get_settings().env != "dev" or not token:
+        raise HTTPException(401, "no launcher session")
+    admin = db.get(User, int(decode(token, "launcher")["sub"]))
+    if not can_sign_in(admin) or admin.role != Role.platform_admin:
+        raise HTTPException(401, "no launcher session")
+    return admin
+
+
+@router.get("/launcher")
+def launcher(request: Request, db: Session = Depends(get_db)):
+    """Every account that can currently sign in, grouped for the role launcher page."""
+    from ..models import Hospital, Role
+    _launcher_admin(request, db)
+    order = [Role.platform_admin, Role.data_scientist, Role.auditor, Role.hospital_admin, Role.clinician]
+    users = sorted((u for u in db.query(User).filter(User.active.is_(True)) if can_sign_in(u)),
+                   key=lambda u: (order.index(u.role), u.id))
+    card = lambda u: {"id": u.id, "email": u.email, "full_name": u.full_name, "role": u.role.value}  # noqa: E731
+    return {
+        "platform": [card(u) for u in users if u.role in (Role.platform_admin, Role.data_scientist, Role.auditor)],
+        "hospitals": [{"id": h.id, "name": h.name, "city": h.city,
+                       "users": [card(u) for u in users if u.hospital_id == h.id]}
+                      for h in db.query(Hospital).filter(Hospital.active.is_(True)).order_by(Hospital.id)],
+    }
+
+
+class EnterIn(BaseModel):
+    user_id: int
+
+
+@router.post("/launcher/enter")
+def launcher_enter(body: EnterIn, request: Request, resp: Response, db: Session = Depends(get_db)):
+    """Start a session as the chosen account. Ends the session of the role being left."""
+    admin = _launcher_admin(request, db)
+    user = db.get(User, body.user_id)
+    if not can_sign_in(user):
+        raise HTTPException(404, "account not found or disabled")
+    if (old := request.cookies.get(COOKIE)) and (rt := db.get(RefreshToken, old)):
+        db.query(RefreshToken).filter_by(family=rt.family).update({"revoked": True}, synchronize_session=False)
+        db.commit()
+    audit.log(db, "auth.launcher_enter", user=admin, resource=f"user:{user.id}", detail={"role": user.role.value})
+    return _session(resp, db, user, mfa=user.mfa_enabled)
+
+
+@router.post("/launcher/close")
+def launcher_close(request: Request, resp: Response, db: Session = Depends(get_db)):
+    """Sign out completely: end the current session and the launcher."""
+    out = logout(request, resp, db)
+    resp.delete_cookie(LAUNCHER, path=get_settings().cookie_path)
+    return out

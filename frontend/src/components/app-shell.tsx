@@ -3,7 +3,7 @@
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import {
   Activity, BrainCircuit, Building2, ChevronDown, FlaskConical, Globe, KeyRound, LogOut, Menu, Monitor, Moon, Network,
-  ScrollText, Share2, Sun, X,
+  ScrollText, Share2, Sun, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -225,7 +225,7 @@ function LanguageMenu() {
 }
 
 function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, logout, launcher, switchRole, signOutAll } = useAuth();
   const { m } = useI18n();
   const [pw, setPw] = useState(false);
   if (!user) return null;
@@ -257,14 +257,19 @@ function UserMenu() {
           </div>
         </div>
         <Dropdown.Separator className="my-1 h-px bg-border" />
+        {launcher && (
+          <Item onSelect={switchRole}>
+            <Users className="size-4" /> Switch role
+          </Item>
+        )}
         <Item onSelect={() => setPw(true)}>
           <KeyRound className="size-4" /> Change password
         </Item>
-        <Item onSelect={logout}>
+        <Item onSelect={launcher ? signOutAll : logout}>
           <LogOut className="size-4" /> {m.common.signOut}
         </Item>
       </Menu_>
-      <ChangePasswordDialog open={pw || user.must_change_password} onOpenChange={setPw} forced={user.must_change_password} />
+      <ChangePasswordDialog open={pw} onOpenChange={setPw} />
     </Dropdown.Root>
   );
 }

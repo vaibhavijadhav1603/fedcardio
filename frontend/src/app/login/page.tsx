@@ -17,7 +17,7 @@ const UNREACHABLE = "Can't reach the FedCardio server. Check that the backend is
 
 function LoginInner() {
   const { m } = useI18n();
-  const { login, verifyMfa, user, loading } = useAuth();
+  const { login, verifyMfa, user, loading, launcher } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -50,8 +50,10 @@ function LoginInner() {
   }, [email, password, demo.length]);
 
   useEffect(() => {
-    if (!loading && user) router.replace(homeFor(user.role));
-  }, [user, loading, router]);
+    // the platform admin's sign-in opens the role launcher; every other role is entered from there
+    if (!loading && launcher) router.replace("/launcher");
+    else if (!loading && user) router.replace(homeFor(user.role));
+  }, [user, loading, launcher, router]);
   useEffect(() => {
     if (challenge) codeRef.current?.focus();
   }, [challenge]);

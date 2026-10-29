@@ -209,7 +209,7 @@ def revoke_consent(cid: int, user: User = Depends(require(Perm.consent_manage)),
 class ShareIn(BaseModel):
     pseudo_id: str = Field(min_length=6, max_length=40)
     purpose: str = Field(pattern="^(treatment|care_coordination|research)$")
-    justification: str = Field(min_length=10, max_length=1000)
+    justification: str = Field(min_length=5, max_length=1000)
 
 
 class DecisionIn(BaseModel):

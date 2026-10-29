@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  ArrowDownToLine, ArrowRight, BarChart3, FlaskConical, Info, Lock, Scale, ShieldAlert, Shuffle, Table2, TrendingUp,
+  ArrowDownToLine, ArrowRight, BarChart3, FlaskConical, Lock, Scale, ShieldAlert, Shuffle, TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Bar, BarChart, CartesianGrid, ErrorBar, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { toast } from "sonner";
 import { ChartTooltip, SERIES, useChartTheme } from "@/components/charts";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, LoadingRows, NativeSelect, PageHeader, Table,
-  Tabs, TabsContent, TabsList, TabsTrigger, Td, Th, Tip,
+  Button, Card, CardBody, CardHeader, EmptyState, ErrorState, LoadingRows, PageHeader, Table,
+  Tabs, TabsContent, TabsList, TabsTrigger, Td, Th,
 } from "@/components/ui";
 import { download } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
@@ -41,9 +41,7 @@ export default function ResultsPage() {
   return (
     <>
       <PageHeader
-        eyebrow={<Badge tone="accent"><FlaskConical /> Script-generated · seeds & commit logged in results/manifest.json</Badge>}
         title="Experiments & evidence"
-        description="Every number on this page is computed from CSVs produced by the experiment scripts. Intervals are 95% Nadeau–Bengio corrected CIs across repeated cross-validation folds."
       />
       {s.loading ? <LoadingRows rows={6} /> : s.error ? <ErrorState error={s.error} onRetry={() => s.reload()} /> : !s.data?.uci ? (
         <EmptyState icon={<FlaskConical />} title="No results yet" description="Run `make reproduce` to generate experiment results." />
@@ -52,7 +50,6 @@ export default function ResultsPage() {
           <div className="scrollbar-thin -mx-1 overflow-x-auto px-1 pb-1">
             <TabsList>
               <TabsTrigger value="overview"><TrendingUp /> Overview</TabsTrigger>
-              <TabsTrigger value="methods"><Table2 /> Methods</TabsTrigger>
               <TabsTrigger value="privacy"><Lock /> Privacy–utility</TabsTrigger>
               <TabsTrigger value="noniid"><Shuffle /> Non-IID & scale</TabsTrigger>
               <TabsTrigger value="sites"><Scale /> Sites & fairness</TabsTrigger>
@@ -61,7 +58,6 @@ export default function ResultsPage() {
             </TabsList>
           </div>
           <TabsContent value="overview"><Overview s={s.data} /></TabsContent>
-          <TabsContent value="methods"><Methods s={s.data} /></TabsContent>
           <TabsContent value="privacy"><Privacy s={s.data} /></TabsContent>
           <TabsContent value="noniid"><NonIID s={s.data} /></TabsContent>
           <TabsContent value="sites"><Sites s={s.data} /></TabsContent>
@@ -98,9 +94,7 @@ function Overview({ s }: { s: Summary }) {
   const u = s.uci!;
   const bestOurs = [...u].filter((r) => !r.paper_reimpl).sort((a, b) => (n(b.auroc) ?? 0) - (n(a.auroc) ?? 0))[0];
   const bestPaper = [...u].filter((r) => r.paper_reimpl).sort((a, b) => (n(b.auroc) ?? 0) - (n(a.auroc) ?? 0))[0];
-  const heNN = find(u, "FedAvg_HE-NN (paper)");
   const plainNN = find(u, "FedAvg-NN (paper)");
-  const overhead = heNN && plainNN ? (n(heNN.bytes_up) ?? 0) / Math.max(1, n(plainNN.bytes_up) ?? 1) : null;
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -109,21 +103,6 @@ function Overview({ s }: { s: Summary }) {
         <Delta a={find(u, "SCAFFOLD-NN")} b={plainNN} label="Drift-aware FL vs FedAvg (paper NN)" sub="SCAFFOLD's control variates counter client drift across the 4 very different hospitals." />
         <Delta a={bestOurs} b={bestPaper} label="Best overall: ours vs paper re-impl." sub="Best AUROC among our methods vs the best paper re-implementation (including centralised)." />
       </div>
-      <Card>
-        <CardHeader icon={<Info />} title="Honest summary" description="What the evidence supports — and what it doesn't." />
-        <CardBody className="grid gap-4 text-[13.5px] leading-relaxed md:grid-cols-2">
-          <ul className="list-disc space-y-2 pl-5">
-            <li>On the UCI 4-hospital federation, the strongest single model remains a <b>centralised logistic regression</b>; federated LR comes close without pooling data.</li>
-            <li><b>Accounted DP-SGD</b> beats the paper&apos;s SVT mechanism on utility while also giving a real (ε, δ) guarantee.</li>
-            <li><b>HE and SecAgg leave accuracy unchanged</b> (identical AUROC to plain FedAvg){overhead ? <>, at ≈{overhead.toFixed(0)}× the upload volume for CKKS</> : null}.</li>
-          </ul>
-          <ul className="list-disc space-y-2 pl-5 text-muted">
-            <li>These are <b>public datasets with different targets</b> from the paper&apos;s Swedish registry; numbers are not directly comparable.</li>
-            <li>UCI is small (n=920) and Switzerland has only 8 negatives, so per-site estimates are noisy.</li>
-            <li>Membership-inference leakage was small for all mechanisms in our setting; DP&apos;s benefit there was not distinguishable from the training-regime change.</li>
-          </ul>
-        </CardBody>
-      </Card>
       {s.uci_history && <Convergence h={s.uci_history} />}
     </div>
   );
@@ -131,7 +110,7 @@ function Overview({ s }: { s: Summary }) {
 
 function Convergence({ h }: { h: NonNullable<Summary["uci_history"]> }) {
   const t = useChartTheme();
-  const methods = ["FedAvg-NN (paper)", "SCAFFOLD-NN", "FedProx-NN mu=0.01", "FedAvg_DP-SVT-NN (paper)", "DP-SGD-NN eps=3", "FedAvg-LR (paper)"];
+  const methods = ["SCAFFOLD-NN", "FedProx-NN mu=0.01", "FedAvg_DP-SVT-NN (paper)", "DP-SGD-NN eps=3"];
   const data = useMemo(() => {
     const by: Record<number, Record<string, number>> = {};
     h.filter((r) => methods.includes(r.method)).forEach((r) => ((by[r.round] ??= { round: r.round })[r.method] = r.val_auroc));
@@ -148,84 +127,9 @@ function Convergence({ h }: { h: NonNullable<Summary["uci_history"]> }) {
             <YAxis domain={[0.4, 1]} tick={{ fill: t.axis, fontSize: 11 }} stroke={t.grid} />
             <Tooltip content={<ChartTooltip labelFmt={(l) => `Round ${l}`} />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            {methods.map((m, i) => <Line key={m} dataKey={m} stroke={SERIES[i]} strokeWidth={2} dot={false} isAnimationActive={false} strokeDasharray={m.includes("SVT") ? "4 3" : undefined} />)}
+            {methods.map((m, i) => <Line key={m} dataKey={m} stroke={SERIES[i + 1]} strokeWidth={2} dot={false} isAnimationActive={false} strokeDasharray={m.includes("SVT") ? "4 3" : undefined} />)}
           </LineChart>
         </ResponsiveContainer>
-      </CardBody>
-    </Card>
-  );
-}
-
-function CiBar({ v, lo, hi, min = 0.5, max = 1 }: { v: number | null; lo: number | null; hi: number | null; min?: number; max?: number }) {
-  if (v == null) return <span className="text-subtle">—</span>;
-  const x = (z: number) => `${((Math.min(max, Math.max(min, z)) - min) / (max - min)) * 100}%`;
-  return (
-    <Tip content={`${num(v)} [${num(lo)}, ${num(hi)}]`}>
-      <div className="flex items-center gap-2">
-        <span className="tabular w-11 text-[13px] font-semibold">{num(v)}</span>
-        <div className="relative h-2 w-28 rounded-full bg-surface-3">
-          {lo != null && hi != null && <div className="absolute top-0 h-2 rounded-full bg-primary/30" style={{ left: x(lo), width: `calc(${x(hi)} - ${x(lo)})` }} />}
-          <div className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-surface" style={{ left: x(v) }} />
-        </div>
-      </div>
-    </Tip>
-  );
-}
-
-function Methods({ s }: { s: Summary }) {
-  const [filter, setFilter] = useState<"all" | "paper" | "ours">("all");
-  const [policy, setPolicy] = useState("val_youden");
-  const rows = (s.uci_policies ?? []).filter((r) => r.policy === policy);
-  const meta = Object.fromEntries((s.uci ?? []).map((r) => [r.method, r]));
-  const shown = rows
-    .filter((r) => filter === "all" || (filter === "paper" ? meta[r.method as string]?.paper_reimpl : !meta[r.method as string]?.paper_reimpl))
-    .sort((a, b) => (n(b.auroc) ?? 0) - (n(a.auroc) ?? 0));
-  return (
-    <Card>
-      <CardHeader
-        icon={<Table2 />}
-        title="UCI Heart — 4 real hospitals, 3×5 per-site stratified CV"
-        description="All methods share identical splits. Thresholds for the operating point are chosen by the selected policy."
-        action={
-          <div className="flex gap-2">
-            <NativeSelect aria-label="Filter methods" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="h-9 w-36">
-              <option value="all">All methods</option>
-              <option value="paper">Paper re-impl.</option>
-              <option value="ours">Our methods</option>
-            </NativeSelect>
-            <NativeSelect aria-label="Threshold policy" value={policy} onChange={(e) => setPolicy(e.target.value)} className="h-9 w-52">
-              <option value="val_youden">Youden on validation (honest)</option>
-              <option value="val_sens80">≥80% sensitivity on validation</option>
-              <option value="fixed_0.5">Fixed 0.5</option>
-              <option value="insample_youden">In-sample Youden (paper code)</option>
-            </NativeSelect>
-          </div>
-        }
-      />
-      <CardBody>
-        <Table>
-          <thead>
-            <tr><Th>Method</Th><Th>AUROC [95% CI]</Th><Th>Sens</Th><Th>Spec</Th><Th>Brier → Platt</Th><Th>Worst site</Th><Th>Upload</Th><Th>ε</Th></tr>
-          </thead>
-          <tbody>
-            {shown.map((r) => {
-              const m = meta[r.method as string] ?? {};
-              return (
-                <tr key={r.method as string} className="hover:bg-surface-2/50">
-                  <Td className="min-w-56"><div className="flex items-center gap-2"><span className="text-[13px] font-medium">{r.method}</span>{m.paper_reimpl && <Badge tone="accent">paper</Badge>}</div></Td>
-                  <Td><CiBar v={n(r.auroc)} lo={n(r.auroc_lo)} hi={n(r.auroc_hi)} /></Td>
-                  <Td className="tabular">{num(n(r.sensitivity), 2)}</Td>
-                  <Td className="tabular">{num(n(r.specificity), 2)}</Td>
-                  <Td className="tabular text-[12.5px]">{num(n(r.brier))} → <span className="font-medium">{num(n(r.brier_platt))}</span></Td>
-                  <Td className="tabular">{num(n(r.worst_site_auroc))}</Td>
-                  <Td className="tabular text-[12.5px] text-muted">{n(r.bytes_up) ? bytes(n(r.bytes_up)) : "—"}</Td>
-                  <Td className="tabular text-[12.5px]">{n(m.epsilon) != null ? num(n(m.epsilon), 1) : "—"}</Td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Table>
-        <p className="mt-3 text-[12px] text-muted">Upload = total bytes sent by all clients over all rounds. Brier → Platt shows the effect of post-hoc calibration fitted on validation data only.</p>
       </CardBody>
     </Card>
   );
@@ -315,14 +219,6 @@ function NonIID({ s }: { s: Summary }) {
   );
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <div role="note" className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-3 text-[13px] leading-relaxed text-warning xl:col-span-2">
-        <Info className="mt-0.5 size-4 shrink-0" />
-        <span>
-          <b>Read pooled AUROC with care under label skew.</b> FedBN keeps a personalised model per site; when sites differ mostly in
-          prevalence, each local model encodes its site&apos;s base rate and the pooled score rewards that, not better within-site
-          discrimination. Its worst-site AUROC shows no gain. Among shared-model methods, SCAFFOLD degrades least as α shrinks.
-        </span>
-      </div>
       {chart(pooled, "Pooled AUROC vs label skew · Cardio-70k", "4 simulated hospitals, 3 seeds.")}
       {chart(data, "Worst-site AUROC vs label skew", "The hospital that the global model serves worst.")}
       {clients.length > 0 && (
@@ -447,9 +343,6 @@ function Paper({ s }: { s: Summary }) {
       <CardHeader icon={<BarChart3 />} title="Side by side with Sharma et al. (2026), Table 2"
         description="Paper: Swedish registry, 4-year incident MI/HF, 660k patients, 6.4% prevalence. Ours: same methods re-implemented on public UCI Heart (prevalent CAD, n=920)." />
       <CardBody>
-        <div role="note" className="mb-4 flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-3 text-[13px] text-warning">
-          <Info className="mt-0.5 size-4 shrink-0" /><span><b>Different dataset — not directly comparable.</b> Use this table to compare <i>relative</i> behaviour (e.g. DP degrading LR more than NN, HE preserving accuracy), not absolute numbers.</span>
-        </div>
         <Table>
           <thead><tr><Th>Method</Th><Th>Learner</Th><Th>Paper AUC</Th><Th>Paper sens / spec</Th><Th>Ours AUC</Th><Th>Ours sens / spec (honest threshold)</Th></tr></thead>
           <tbody>

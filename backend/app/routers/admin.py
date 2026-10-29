@@ -1,5 +1,6 @@
 """Hospitals and users. Hospital admins manage only their own tenant; nobody can grant platform_admin
 except a platform_admin."""
+import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -52,7 +53,7 @@ def hospitals(user: User = Depends(current_user), db: Session = Depends(get_db))
 class AdminIn(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=200)
-    password: str = Field(min_length=10, max_length=200)
+    password: str | None = Field(default=None, min_length=5, max_length=200)  # optional: the launcher needs none
 
 
 class HospitalIn(BaseModel):
@@ -74,7 +75,7 @@ def create_hospital(body: HospitalIn, user: User = Depends(require(Perm.hospital
     admin = None
     if body.admin:
         admin = User(email=body.admin.email.lower(), full_name=body.admin.full_name, role=Role.hospital_admin,
-                     hospital_id=h.id, password_hash=hash_password(body.admin.password), must_change_password=True)
+                     hospital_id=h.id, password_hash=hash_password(body.admin.password or secrets.token_urlsafe(24)))
         db.add(admin)
     db.commit()
     audit.log(db, "hospital.create", user=user, resource=f"hospital:{h.id}")
@@ -177,7 +178,7 @@ class UserIn(BaseModel):
     full_name: str = Field(min_length=2, max_length=200)
     role: Role
     hospital_id: int | None = None
-    password: str = Field(min_length=10, max_length=200)
+    password: str | None = Field(default=None, min_length=5, max_length=200)  # optional: the launcher needs none
 
 
 class UserPatch(BaseModel):
@@ -230,7 +231,7 @@ def create_user(body: UserIn, actor: User = Depends(require(Perm.user_manage)), 
     if db.query(User).filter_by(email=body.email.lower()).first():
         raise HTTPException(409, "email exists")
     u = User(email=body.email.lower(), full_name=body.full_name, role=body.role, hospital_id=body.hospital_id,
-             password_hash=hash_password(body.password), must_change_password=True)
+             password_hash=hash_password(body.password or secrets.token_urlsafe(24)))
     db.add(u)
     db.commit()
     audit.log(db, "user.create", user=actor, resource=f"user:{u.id}", detail={"role": body.role.value})
@@ -259,12 +260,12 @@ def patch_user(uid: int, body: UserPatch, actor: User = Depends(require(Perm.use
 
 
 class ResetIn(BaseModel):
-    password: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=5, max_length=200)
 
 
 @router.post("/users/{uid}/password")
 def reset_password(uid: int, body: ResetIn, actor: User = Depends(require(Perm.user_manage)), db: Session = Depends(get_db)):
-    """Give a user a new temporary password (they must change it at next sign-in) and end their sessions.
+    """Give a user a new password and end their sessions.
     You may only reset accounts whose role you could appoint, so the platform admin can never take over a
     clinician's account and reach patient data that way."""
     u = db.get(User, uid)
@@ -275,7 +276,7 @@ def reset_password(uid: int, body: ResetIn, actor: User = Depends(require(Perm.u
         raise HTTPException(400, "change your own password from your account menu")
     if u.role not in ASSIGNABLE.get(actor.role, set()):
         raise HTTPException(403, f"you cannot reset a {u.role.value}'s password")
-    u.password_hash, u.must_change_password = hash_password(body.password), True
+    u.password_hash = hash_password(body.password)
     db.query(RefreshToken).filter_by(user_id=u.id).update({"revoked": True}, synchronize_session=False)
     db.commit()
     audit.log(db, "user.password_reset", user=actor, resource=f"user:{u.id}")

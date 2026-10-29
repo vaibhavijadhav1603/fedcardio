@@ -244,7 +244,7 @@ function NewUserDialog({ open, onOpenChange, hospitals, onDone }: { open: boolea
     setBusy(true);
     setErr(null);
     try {
-      await api("/users", { method: "POST", json: { ...f, hospital_id: atHospital && f.hospital_id ? Number(f.hospital_id) : null } });
+      await api("/users", { method: "POST", json: { ...f, password: f.password || null, hospital_id: atHospital && f.hospital_id ? Number(f.hospital_id) : null } });
       toast.success("User created");
       onOpenChange(false);
       onDone();
@@ -276,7 +276,7 @@ function NewUserDialog({ open, onOpenChange, hospitals, onDone }: { open: boolea
             </NativeSelect>
           </Field>
         </div>
-        <Field label="Temporary password" htmlFor="u-pw" hint="At least 10 characters." error={err}><Input id="u-pw" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
+        <Field label="Password (optional)" htmlFor="u-pw" hint="Leave blank to enter this account from the role launcher only. Otherwise at least 5 characters." error={err}><Input id="u-pw" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
       </div>
     </Dialog>
   );
@@ -291,8 +291,8 @@ function NewHospitalDialog({ open, onOpenChange, onDone }: { open: boolean; onOp
   async function submit() {
     setBusy(true);
     try {
-      await api("/hospitals", { method: "POST", json: { ...f, admin: a } });
-      toast.success("Hospital added", { description: `${a.email} can now sign in and add the hospital's clinicians.` });
+      await api("/hospitals", { method: "POST", json: { ...f, admin: { ...a, password: a.password || null } } });
+      toast.success("Hospital added", { description: `${a.full_name} is now in the role launcher and can add the hospital's clinicians.` });
       setF(blank);
       setA(blankAdmin);
       onOpenChange(false);
@@ -317,7 +317,7 @@ function NewHospitalDialog({ open, onOpenChange, onDone }: { open: boolean; onOp
         <Field label="Admin's full name" htmlFor="h-aname"><Input id="h-aname" value={a.full_name} onChange={(e) => setA({ ...a, full_name: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Admin's email" htmlFor="h-aemail"><Input id="h-aemail" type="email" value={a.email} onChange={(e) => setA({ ...a, email: e.target.value })} /></Field>
-          <Field label="Temporary password" htmlFor="h-apw" hint="At least 10 characters."><Input id="h-apw" type="password" value={a.password} onChange={(e) => setA({ ...a, password: e.target.value })} /></Field>
+          <Field label="Password (optional)" htmlFor="h-apw" hint="Blank = launcher only. Else 5+ characters."><Input id="h-apw" type="password" value={a.password} onChange={(e) => setA({ ...a, password: e.target.value })} /></Field>
         </div>
       </div>
     </Dialog>
@@ -529,7 +529,7 @@ function ResetPasswordDialog({ target: u, onClose }: { target: UserRow | null; o
     setErr(null);
     try {
       await api(`/users/${u.id}/password`, { method: "POST", json: { password: pw } });
-      toast.success(`New temporary password set for ${u.full_name}`, { description: "Tell them in person; they choose their own at next sign-in." });
+      toast.success(`New password set for ${u.full_name}`, { description: "Their other sessions were signed out." });
       close();
     } catch (e) {
       setErr((e as Error).message);
@@ -539,9 +539,9 @@ function ResetPasswordDialog({ target: u, onClose }: { target: UserRow | null; o
   }
   return (
     <Dialog open={!!u} onOpenChange={(o) => !o && close()} title={`Reset password for ${u?.full_name ?? ""}`}
-      description="They are signed out everywhere and must choose their own password the next time they sign in."
-      footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button onClick={submit} loading={busy} disabled={pw.length < 10}>Set temporary password</Button></>}>
-      <Field label="New temporary password" htmlFor="rp-pw" hint="At least 10 characters." error={err}>
+      description="They are signed out everywhere and use this password from now on."
+      footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button onClick={submit} loading={busy} disabled={pw.length < 5}>Set password</Button></>}>
+      <Field label="New password" htmlFor="rp-pw" hint="At least 5 characters." error={err}>
         <Input id="rp-pw" type="text" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} />
       </Field>
     </Dialog>

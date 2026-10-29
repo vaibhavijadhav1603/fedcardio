@@ -187,22 +187,55 @@ def test_demo_accounts_list_only_existing_accounts(client):
 def test_password_change_and_admin_reset(client, tokens):
     hid, admin, dr = _new_hospital(client, tokens, "satara")
     me = client.get("/auth/me", headers=dr).json()
-    assert me["must_change_password"] is True  # temporary password from the hospital admin
+    assert me["must_change_password"] is False  # no forced change of an admin-issued password
     assert client.post("/auth/password", headers=dr, json={"current_password": "wrong-one-xx", "new_password": "Mine!2026xyz"}).status_code == 400
     r = client.post("/auth/password", headers=dr, json={"current_password": PW, "new_password": "Mine!2026xyz"})
     assert r.status_code == 200 and r.json()["must_change_password"] is False
     assert client.post("/auth/login", json={"email": "dr@satara.fedcardio.dev", "password": PW}).status_code == 401
     assert client.post("/auth/login", json={"email": "dr@satara.fedcardio.dev", "password": "Mine!2026xyz"}).status_code == 200
+    assert client.post("/auth/password", headers=dr, json={"current_password": "Mine!2026xyz", "new_password": "abcd"}).status_code == 422
+    assert client.post("/auth/password", headers=dr, json={"current_password": "Mine!2026xyz", "new_password": "abcde"}).status_code == 200
+    assert client.post("/auth/login", json={"email": "dr@satara.fedcardio.dev", "password": "abcde"}).status_code == 200
 
     uid = me["id"]
     # the platform admin cannot take over a clinician account (that would reach patient data)
     assert client.post(f"/users/{uid}/password", headers=tokens["platform_admin"], json={"password": "Reset!2026xx"}).status_code == 403
     assert client.post(f"/users/{uid}/password", headers=tokens["hospital_admin"], json={"password": "Reset!2026xx"}).status_code == 403
     r = client.post(f"/users/{uid}/password", headers=admin, json={"password": "Reset!2026xx"})
-    assert r.status_code == 200 and r.json()["must_change_password"] is True
+    assert r.status_code == 200 and r.json()["must_change_password"] is False
     assert client.post("/auth/login", json={"email": "dr@satara.fedcardio.dev", "password": "Reset!2026xx"}).status_code == 200
     admin_id = client.get("/auth/me", headers=admin).json()["id"]
     assert client.post(f"/users/{admin_id}/password", headers=tokens["platform_admin"], json={"password": "Reset!2026yy"}).status_code == 200
+
+
+def test_role_launcher(client, tokens):
+    client.cookies.clear()
+    assert client.get("/auth/launcher").status_code == 401
+    # a non-admin sign-in does not open the launcher
+    client.post("/auth/login", json={"email": "ds@fedcardio.dev", "password": DEMO_PASSWORD})
+    assert client.get("/auth/launcher").status_code == 401
+    client.post("/auth/login", json={"email": "admin@fedcardio.dev", "password": DEMO_PASSWORD})
+    groups = client.get("/auth/launcher").json()
+    assert {u["role"] for u in groups["platform"]} == {"platform_admin", "data_scientist", "auditor"}
+    cle = next(h for h in groups["hospitals"] if h["name"].startswith("Cleveland"))
+    dr = next(u for u in cle["users"] if u["role"] == "clinician")
+    r = client.post("/auth/launcher/enter", json={"user_id": dr["id"]})
+    assert r.status_code == 200 and r.json()["user"]["role"] == "clinician"
+    hdr = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    assert client.get("/auth/me", headers=hdr).json()["email"] == dr["email"]
+    # switching again needs no password, and the launcher survives a role's sign-out
+    client.post("/auth/logout")
+    ds = next(u for u in groups["platform"] if u["role"] == "data_scientist")
+    assert client.post("/auth/launcher/enter", json={"user_id": ds["id"]}).json()["user"]["role"] == "data_scientist"
+    # an account created without a password can still be entered from the launcher
+    h = client.post("/hospitals", headers=tokens["platform_admin"], json={
+        "code": "wardha", "name": "Wardha Heart", "admin": {"full_name": "No Password", "email": "admin@wardha.fedcardio.dev"}})
+    assert h.status_code == 201
+    new = next(x for x in client.get("/auth/launcher").json()["hospitals"] if x["id"] == h.json()["id"])["users"][0]
+    assert client.post("/auth/launcher/enter", json={"user_id": new["id"]}).json()["user"]["role"] == "hospital_admin"
+    assert client.post("/auth/launcher/close").status_code == 200
+    assert client.get("/auth/launcher").status_code == 401
+    client.cookies.clear()
 
 
 def test_registered_patients_become_training_rows(client, tokens):

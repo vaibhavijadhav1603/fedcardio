@@ -49,8 +49,6 @@ const ALGOS = [
   { v: "fedavg", l: "FedAvg", d: "Weighted average of client updates (McMahan et al.) — the paper's baseline." },
   { v: "fedprox", l: "FedProx", d: "Adds a proximal term that limits client drift under non-IID data." },
   { v: "scaffold", l: "SCAFFOLD", d: "Control variates correct client drift; doubles communication." },
-  { v: "fedadam", l: "FedAdam", d: "Adaptive server optimizer on the aggregated pseudo-gradient." },
-  { v: "fedbn", l: "FedBN", d: "Keeps normalization layers local to each hospital." },
 ];
 
 export default function FederatedPage() {
@@ -195,7 +193,7 @@ function Launcher({ onLaunched }: { onLaunched: (id: number) => void }) {
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Rounds" htmlFor="rounds"><Input id="rounds" type="number" min={1} max={300} value={rounds} onChange={(e) => setRounds(Number(e.target.value))} /></Field>
-          <Field label="Local epochs" htmlFor="epochs"><Input id="epochs" type="number" min={1} max={50} value={epochs} onChange={(e) => setEpochs(Number(e.target.value))} disabled={dp} /></Field>
+          <Field label="Local epochs" htmlFor="epochs"><Input id="epochs" type="number" min={1} max={50} value={epochs} onChange={(e) => setEpochs(Number(e.target.value))} /></Field>
         </div>
         <div className="space-y-4 rounded-xl border border-border p-4">
           <div className="text-[12px] font-semibold uppercase tracking-wide text-subtle">Privacy mechanisms</div>

@@ -32,7 +32,7 @@ MIN_SITES = 2
 class JobIn(BaseModel):
     name: str = Field(default="", max_length=120)
     model: str = Field(default="paper_nn", pattern="^(paper_nn|lr|mlp)$")
-    algorithm: str = Field(default="fedavg", pattern="^(fedavg|fedprox|scaffold|fedadam|fedbn)$")
+    algorithm: str = Field(default="fedavg", pattern="^(fedavg|fedprox|scaffold)$")
     privacy: str = Field(default="none", pattern="^(none|svt|dpsgd|he|secagg|dpsgd\\+he|dpsgd\\+secagg)$")
     rounds: int = Field(default=30, ge=1, le=300)
     local_epochs: int = Field(default=5, ge=1, le=50)
@@ -162,7 +162,7 @@ def _run(job_id: int):
                           b.y.to_numpy().astype(np.float32)) for s, (a, b, _) in splits.items()]
         extra = {}
         if "dpsgd" in cfg_d["privacy"]:
-            extra = {"dp_sample_rate": 0.2, "dp_lr": 0.5, "local_epochs": 1}
+            extra = {"dp_sample_rate": 0.2, "dp_lr": 0.5}  # noise is calibrated to rounds x local_epochs
         cfg = FLConfig(**{**dict(model=cfg_d["model"], algorithm=cfg_d["algorithm"], privacy=cfg_d["privacy"],
                                  rounds=cfg_d["rounds"], local_epochs=cfg_d["local_epochs"], lr=cfg_d["lr"],
                                  batch_size=20000, prox_mu=cfg_d["prox_mu"], dp_epsilon=cfg_d["dp_epsilon"],

@@ -168,18 +168,14 @@ test("data scientist launches an encrypted federated job and watches it converge
 test("results explorer shows script-generated evidence and the paper comparison", async ({ page }) => {
   await login(page, "ds@fedcardio.dev");
   await page.getByRole("link", { name: "Experiments" }).click();
-  await expect(page.getByText("Honest summary")).toBeVisible();
+  await expect(page.getByText("Accounted DP vs paper's SVT-DP (NN)")).toBeVisible();
   await shot(page, "06-results-overview");
-  await page.getByRole("tab", { name: "Methods" }).click();
-  await expect(page.getByText("UCI Heart — 4 real hospitals")).toBeVisible();
-  await a11y(page, "results-methods");
-  await shot(page, "07-results-methods");
   await page.getByRole("tab", { name: "Privacy–utility" }).click();
   await shot(page, "08-results-privacy");
   await page.getByRole("tab", { name: "Non-IID & scale" }).click();
   await shot(page, "09-results-noniid");
   await page.getByRole("tab", { name: "vs. base paper" }).click();
-  await expect(page.getByText("Different dataset — not directly comparable.")).toBeVisible();
+  await expect(page.getByText("Side by side with Sharma et al. (2026), Table 2")).toBeVisible();
   await shot(page, "10-results-paper");
 });
 
